@@ -3,19 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cartera · MoneyCash (nuevo)</title>
+<title>MoneyCash · CRM</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#eef3f7;color:#23323d;padding-bottom:30px}
-  .topbar{background:#0f5980;color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.12)}
-  .topbar .tit{font-size:1.05em;font-weight:800}
-  .topbar .sub{font-size:.66em;opacity:.85;font-weight:600;margin-top:2px}
-  .btnref{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:1.1em;width:38px;height:38px;border-radius:10px;cursor:pointer}
-  .btnref:active{transform:scale(.92)}
+  /* ── LOGIN ── */
+  #login{position:fixed;inset:0;background:linear-gradient(160deg,#0f5980,#0a3f5c);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .loginbox{background:#fff;border-radius:18px;padding:30px 24px;width:100%;max-width:360px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .logo{text-align:center;font-size:1.5em;font-weight:900;color:#0f5980;margin-bottom:4px;letter-spacing:-.5px}
+  .logosub{text-align:center;font-size:.72em;color:#7d94a3;font-weight:600;margin-bottom:22px}
+  .loginbox label{display:block;font-size:.74em;font-weight:700;color:#5a7384;margin:12px 0 5px}
+  .loginbox input{width:100%;padding:12px;border:1px solid #d4dee6;border-radius:10px;font-size:.95em}
+  .loginbox button{width:100%;margin-top:20px;padding:13px;background:#0f5980;color:#fff;border:none;border-radius:11px;font-weight:800;font-size:.95em;cursor:pointer}
+  .loginbox button:active{transform:scale(.98)}
+  .loginerr{background:#ffe3e3;color:#c0392b;padding:10px;border-radius:9px;font-size:.8em;font-weight:600;margin-top:14px;display:none}
+  /* ── APP ── */
+  #app{display:none}
+  .topbar{background:#0f5980;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+  .topbar .tit{font-size:1.02em;font-weight:800}
+  .topbar .sub{font-size:.64em;opacity:.85;font-weight:600;margin-top:2px}
+  .tbtns{display:flex;gap:8px}
+  .ibtn{background:rgba(255,255,255,.18);border:none;color:#fff;font-size:1em;width:36px;height:36px;border-radius:9px;cursor:pointer}
+  .ibtn:active{transform:scale(.92)}
   .wrap{max-width:640px;margin:0 auto;padding:14px}
   .vel{background:#d3f9d8;color:#1c7c4a;font-weight:800;font-size:.82em;padding:9px 12px;border-radius:9px;margin-bottom:12px;text-align:center}
   .vel.lento{background:#fff3bf;color:#b5700c}
-  input,select{width:100%;padding:11px 12px;border:1px solid #d4dee6;border-radius:10px;font-size:.92em;background:#fff;margin-bottom:8px}
+  input.f,select{width:100%;padding:11px 12px;border:1px solid #d4dee6;border-radius:10px;font-size:.92em;background:#fff;margin-bottom:8px}
   .filtros{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
   .resumen{font-size:.8em;color:#7d94a3;font-weight:700;margin:6px 0 12px}
   .card{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(15,89,128,.07);border-left:4px solid #2fb344}
@@ -32,27 +45,47 @@
 </style>
 </head>
 <body>
-  <div class="topbar">
-    <div>
-      <div class="tit">📋 Cartera</div>
-      <div class="sub">MoneyCash · CRM nuevo (Supabase) · DATOS REALES</div>
+
+  <!-- ════ LOGIN ════ -->
+  <div id="login">
+    <div class="loginbox">
+      <div class="logo">MoneyCash</div>
+      <div class="logosub">Sistema de cartera</div>
+      <label>Correo</label>
+      <input type="email" id="email" placeholder="tu@correo.com" autocomplete="username">
+      <label>Contraseña</label>
+      <input type="password" id="pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')entrar()">
+      <button onclick="entrar()" id="btnEntrar">Entrar</button>
+      <div class="loginerr" id="loginerr"></div>
     </div>
-    <button class="btnref" onclick="cargar()" title="Actualizar">🔄</button>
   </div>
 
-  <div class="wrap">
-    <div id="vel" class="vel" style="display:none"></div>
-    <input type="text" id="busca" placeholder="🔍 Buscar cliente..." oninput="render()">
-    <div class="filtros">
-      <select id="fEjec" onchange="render()"><option value="">Todos los ejecutivos</option></select>
-      <select id="fEstado" onchange="render()">
-        <option value="">Todos</option>
-        <option value="ACT">Con saldo</option>
-        <option value="LIQ">Liquidados</option>
-      </select>
+  <!-- ════ APP ════ -->
+  <div id="app">
+    <div class="topbar">
+      <div>
+        <div class="tit">📋 Cartera</div>
+        <div class="sub" id="quien">MoneyCash · CRM</div>
+      </div>
+      <div class="tbtns">
+        <button class="ibtn" onclick="cargar()" title="Actualizar">🔄</button>
+        <button class="ibtn" onclick="salir()" title="Salir">🚪</button>
+      </div>
     </div>
-    <div id="resumen" class="resumen"></div>
-    <div id="lista"></div>
+    <div class="wrap">
+      <div id="vel" class="vel" style="display:none"></div>
+      <input type="text" class="f" id="busca" placeholder="🔍 Buscar cliente..." oninput="render()">
+      <div class="filtros">
+        <select id="fEjec" onchange="render()"><option value="">Todos los ejecutivos</option></select>
+        <select id="fEstado" onchange="render()">
+          <option value="">Todos</option>
+          <option value="ACT">Con saldo</option>
+          <option value="LIQ">Liquidados</option>
+        </select>
+      </div>
+      <div id="resumen" class="resumen"></div>
+      <div id="lista"></div>
+    </div>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -64,23 +97,64 @@
   let DATA = [];
   const f = n => '$' + Number(n||0).toLocaleString('es-MX', {maximumFractionDigits:0});
 
+  // ── Al abrir: ¿ya hay sesión? ──
+  async function init(){
+    const { data:{ session } } = await db.auth.getSession();
+    if(session){ mostrarApp(session); } else { mostrarLogin(); }
+  }
+  function mostrarLogin(){
+    document.getElementById('login').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+  function mostrarApp(session){
+    document.getElementById('login').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('quien').textContent = 'MoneyCash · ' + (session.user.email || '');
+    cargar();
+  }
+
+  // ── Entrar ──
+  async function entrar(){
+    const email = document.getElementById('email').value.trim();
+    const pass  = document.getElementById('pass').value;
+    const errBox = document.getElementById('loginerr');
+    const btn = document.getElementById('btnEntrar');
+    errBox.style.display = 'none';
+    if(!email || !pass){ errBox.textContent='Pon tu correo y contraseña.'; errBox.style.display='block'; return; }
+    btn.textContent = 'Entrando...'; btn.disabled = true;
+    const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
+    btn.textContent = 'Entrar'; btn.disabled = false;
+    if(error){
+      errBox.textContent = 'Correo o contraseña incorrectos.';
+      errBox.style.display = 'block';
+      return;
+    }
+    document.getElementById('pass').value = '';
+    mostrarApp(data.session);
+  }
+
+  // ── Salir ──
+  async function salir(){
+    await db.auth.signOut();
+    mostrarLogin();
+  }
+
+  // ── Cargar cartera (ya autenticado) ──
   async function cargar(){
     document.getElementById('lista').innerHTML = '<div class="loader">⏳ Cargando...</div>';
     const t0 = performance.now();
     const { data, error } = await db.from('cartera').select('*').order('saldo', {ascending:false});
     const ms = Math.round(performance.now() - t0);
-
     const vel = document.getElementById('vel');
     vel.style.display = 'block';
     if(error){
-      document.getElementById('lista').innerHTML = '<div class="err">❌ Error: ' + error.message + '</div>';
+      document.getElementById('lista').innerHTML = '<div class="err">❌ ' + error.message + '</div>';
       vel.style.display = 'none';
       return;
     }
     DATA = data || [];
     vel.className = 'vel' + (ms > 800 ? ' lento' : '');
-    vel.textContent = '⚡ Cargó ' + DATA.length + ' clientes REALES en ' + ms + ' ms';
-
+    vel.textContent = '⚡ ' + DATA.length + ' clientes en ' + ms + ' ms';
     const sel = document.getElementById('fEjec');
     if(sel.options.length <= 1){
       [...new Set(DATA.map(c=>c.ejecutivo).filter(Boolean))].sort().forEach(e=>{
@@ -94,33 +168,24 @@
     const q = document.getElementById('busca').value.trim().toLowerCase();
     const fe = document.getElementById('fEjec').value;
     const fes = document.getElementById('fEstado').value;
-
     let lista = DATA.filter(c => (c.nombre||'').toLowerCase().includes(q));
     if(fe)  lista = lista.filter(c => c.ejecutivo === fe);
     if(fes === 'ACT') lista = lista.filter(c => Number(c.saldo||0) > 0);
     if(fes === 'LIQ') lista = lista.filter(c => Number(c.saldo||0) <= 0);
-
     const tot = lista.reduce((s,c)=> s + Number(c.saldo||0), 0);
     document.getElementById('resumen').textContent = lista.length + ' clientes · cartera ' + f(tot);
-
     document.getElementById('lista').innerHTML = lista.map(c => {
       const liq = Number(c.saldo||0) <= 0;
-      return '<div class="card' + (liq?' liq':'') + '">' +
-        '<div class="crow">' +
-          '<div style="min-width:0">' +
-            '<div class="nom">' + (c.nombre||'') + '</div>' +
-            '<div class="meta">👤 ' + (c.ejecutivo||'—') + ' · ' + (c.frecuencia||'—') + ' · capital ' + f(c.capital) + '</div>' +
-          '</div>' +
-          '<div>' +
-            '<div class="saldo">' + f(c.saldo) + '</div>' +
-            '<div style="text-align:right"><span class="badge ' + (liq?'liq':'act') + '">' + (liq?'LIQUIDADO':'CON SALDO') + '</span></div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
+      return '<div class="card' + (liq?' liq':'') + '"><div class="crow">' +
+        '<div style="min-width:0"><div class="nom">' + (c.nombre||'') + '</div>' +
+        '<div class="meta">👤 ' + (c.ejecutivo||'—') + ' · ' + (c.frecuencia||'—') + ' · capital ' + f(c.capital) + '</div></div>' +
+        '<div><div class="saldo">' + f(c.saldo) + '</div>' +
+        '<div style="text-align:right"><span class="badge ' + (liq?'liq':'act') + '">' + (liq?'LIQUIDADO':'CON SALDO') + '</span></div></div>' +
+        '</div></div>';
     }).join('') || '<div class="loader">Sin resultados</div>';
   }
 
-  cargar();
+  init();
 </script>
 </body>
 </html>
