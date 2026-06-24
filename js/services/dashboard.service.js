@@ -20,8 +20,8 @@ export function construirResumen(carteraRows, desgloseRows, rol, ejecutivo) {
   }
   const deudaTotal = capitalPend + interesPend;
 
-  // Cobrado del MES y de HOY (desde DESGLOSE)
-  let cobradoMes=0, cobradoHoy=0, intHoy=0;
+  // Cobrado del MES y de HOY (desde DESGLOSE) + interés cobrado (ingreso real)
+  let cobradoMes=0, cobradoHoy=0, intHoy=0, intCobradoMes=0;
   const ahora = new Date();
   const yyMM = ahora.toISOString().slice(0,7);     // 'yyyy-MM'
   const hoyISO = ahora.toISOString().slice(0,10);  // 'yyyy-MM-dd'
@@ -30,10 +30,10 @@ export function construirResumen(carteraRows, desgloseRows, rol, ejecutivo) {
     if (rol==='EJECUTIVO' && norm(r.ejecutivo)!==norm(ejecutivo)) continue;
     const f = String(r.fecha).slice(0,10);
     const monto = Number(r.pago)||0, intt = Number(r.interes)||0;
-    if (f.slice(0,7) === yyMM) cobradoMes += monto;
+    if (f.slice(0,7) === yyMM) { cobradoMes += monto; intCobradoMes += intt; }
     if (f === hoyISO) { cobradoHoy += monto; intHoy += intt; }
   }
 
   const porEjecutivo = Object.entries(porEjec).map(([k,v])=>({ejecutivo:k, monto:v})).sort((a,b)=>b.monto-a.monto);
-  return { totalCartera, numActivos, capitalColocado, capitalPend, interesPend, deudaTotal, cobradoMes, cobradoHoy, intHoy, porEjecutivo };
+  return { totalCartera, numActivos, capitalColocado, capitalPend, interesPend, deudaTotal, cobradoMes, cobradoHoy, intHoy, intCobradoMes, porEjecutivo };
 }

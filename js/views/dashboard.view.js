@@ -20,12 +20,16 @@ export async function renderDashboard(perfil) {
 
   root.innerHTML = `
     <div class="kpis">
-      <div class="kcard"><div class="klab">Capital vivo</div><div class="kval num">${money(r.totalCartera)}</div><div class="kfoot">${r.numActivos} créditos activos</div></div>
-      <div class="kcard k-cob"><div class="klab">Cobrado hoy</div><div class="kval num green">${money(r.cobradoHoy)}</div><div class="kfoot">interés hoy ${money(r.intHoy)}</div></div>
+      <div class="kcard"><div class="klab">Capital colocado</div><div class="kval num">${money(r.capitalColocado)}</div><div class="kfoot">${r.numActivos} créditos · préstamo original</div></div>
+      <div class="kcard"><div class="klab">Por cobrar</div><div class="kval num">${money(r.deudaTotal)}</div><div class="kfoot">cap ${money(r.capitalPend)} · int ${money(r.interesPend)}</div></div>
     </div>
     <div class="kpis">
-      <div class="kcard"><div class="klab">Cobrado del mes</div><div class="kval num">${money(r.cobradoMes)}</div><div class="kfoot">este mes</div></div>
-      <div class="kcard"><div class="klab">Deuda total</div><div class="kval num">${money(r.deudaTotal)}</div><div class="kfoot">cap ${money(r.capitalPend)} · int ${money(r.interesPend)}</div></div>
+      <div class="kcard k-cob"><div class="klab">Cobrado hoy</div><div class="kval num green">${money(r.cobradoHoy)}</div><div class="kfoot">interés hoy ${money(r.intHoy)}</div></div>
+      <div class="kcard"><div class="klab">Intereses cobrados (mes)</div><div class="kval num gold">${money(r.intCobradoMes)}</div><div class="kfoot">ingreso real del mes</div></div>
+    </div>
+    <div class="kpis">
+      <div class="kcard"><div class="klab">Cobrado del mes</div><div class="kval num">${money(r.cobradoMes)}</div><div class="kfoot">total recibido (cap + int)</div></div>
+      <div class="kcard"><div class="klab">Capital recuperado (mes)</div><div class="kval num">${money(Math.max(0, r.cobradoMes - r.intCobradoMes))}</div><div class="kfoot">devuelto a inversionistas</div></div>
     </div>
 
     ${puedeConciliar ? `<button class="btn-card" id="d-conc">

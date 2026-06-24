@@ -30,6 +30,55 @@ export function nPagosConPendiente(pendientesRows, cliente) {
 function hayPerdonVigente() { return false; }
 
 /**
+ * RÉPLICA de infoClientePago: montos sugeridos para la pantalla de pago.
+ * Devuelve { sugerido, montoMinimo, liquidar50, liquidarCompleto, capPend, intPend, multaPago, esImpuntual, nPagoCobrar }.
+ */
+export function infoPago(carteraRow, calRows, pendientesRows) {
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const pf = v => v ? new Date(v) : null;
+  const pagos = (calRows||[]).slice().sort((a,b)=>(a.n_pago||0)-(b.n_pago||0));
+  const yaReg = nPagosConPendiente(pendientesRows, carteraRow.nombre);
+  const prox = proximoPagoPendiente(pagos, yaReg);
+  if (prox && (Number(prox.monto_impuntual)||0) < (Number(prox.monto_puntual)||0)) prox.monto_impuntual = prox.monto_puntual;
+
+  // Capital / interés pendientes (suma de los pagos no pagados)
+  let capPend=0, intPend=0;
+  for (const p of pagos) { if (U(p.estatus).indexOf('PAGADO')<0) { capPend += Number(p.capital)||0; intPend += Number(p.interes)||0; } }
+  const liquidar50 = Math.round((capPend + intPend*0.5)*100)/100;   // capital + 50% interés (previa autorización)
+  const liquidarCompleto = Math.round(capPend + intPend);            // liquidación COMPLETA hoy (sin descuento)
+  const pgInt = parseFloat(carteraRow.pg_int)||0;
+  const montoMinimo = prox ? Math.round(Number(prox.interes)>0 ? Number(prox.interes) : pgInt) : 0;
+
+  // Sugerido = acumulado de pagos pendientes ya vencidos o que vencen hoy (fecha ≤ hoy)
+  let sugeridoAcum=0, multaAcum=0;
+  for (const pg of pagos) {
+    if (U(pg.estatus).indexOf('PAGADO')>=0) continue;
+    if (yaReg.has(pg.n_pago)) continue;
+    const f = pf(pg.fecha); if (!f) continue;
+    const fpg = new Date(f); fpg.setHours(0,0,0,0);
+    if (fpg.getTime() > hoy.getTime()) continue;
+    const impPg = estaImpuntual(f, hoy) && !hayPerdonVigente();
+    let fullPg = impPg ? (Number(pg.monto_impuntual)||0) : (Number(pg.monto_puntual)||0);
+    if (fullPg < (Number(pg.monto_puntual)||0)) fullPg = Number(pg.monto_puntual)||0;
+    const faltaPg = Math.max(0, Math.round(fullPg - (Number(pg.pagado)||0)));
+    if (faltaPg <= 0) continue;
+    sugeridoAcum += faltaPg;
+    if (impPg) multaAcum += Math.round((Number(pg.monto_impuntual)||0)-(Number(pg.monto_puntual)||0));
+  }
+  let sugerido=0, multaPago=0, esImpuntual=false, nPagoCobrar=0;
+  if (prox) {
+    esImpuntual = estaImpuntual(pf(prox.fecha), hoy) && !hayPerdonVigente();
+    const pagoCompleto = esImpuntual ? (Number(prox.monto_impuntual)||0) : (Number(prox.monto_puntual)||0);
+    sugerido = Math.max(0, pagoCompleto - Math.round(Number(prox.pagado)||0));
+    multaPago = esImpuntual ? ((Number(prox.monto_impuntual)||0)-(Number(prox.monto_puntual)||0)) : 0;
+    nPagoCobrar = prox.n_pago;
+  }
+  if (sugeridoAcum > 0) { sugerido = sugeridoAcum; multaPago = multaAcum; esImpuntual = (multaAcum>0); }
+
+  return { sugerido, montoMinimo, liquidar50, liquidarCompleto, capPend:Math.round(capPend), intPend:Math.round(intPend), multaPago, esImpuntual, nPagoCobrar };
+}
+
+/**
  * RÉPLICA de registrarPagoPendiente. Devuelve { record, msg } para insertar en pagos_pendientes.
  * Lanza Error con el mismo mensaje del Script si algo no cuadra.
  * @param datos { cliente, monto, tipo:'NORMAL'|'MINIMO'|'LIQUIDAR'|'OTRO', formaPago, cuenta, direccionExcedente }

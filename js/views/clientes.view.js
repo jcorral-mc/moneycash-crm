@@ -37,7 +37,7 @@ export async function renderClientes(perfil) {
     const texto = (q.value||'').trim().toLowerCase(), fe = ej.value;
     let l = lista.filter(c => c.nombre.toLowerCase().includes(texto));
     if (fe) l = l.filter(c => c.ejecutivo === fe);
-    res.textContent = `${l.length} clientes · cartera ${money(l.reduce((s,c)=>s+c.saldo,0))}`;
+    res.textContent = `${l.length} clientes · capital ${money(l.reduce((s,c)=>s+c.capital,0))} · por cobrar ${money(l.reduce((s,c)=>s+c.saldo,0))}`;
     list.innerHTML = l.map(c => `
       <div class="cli ${c.estado==='VENCIDO'?'mora':''}" data-n="${encodeURIComponent(c.nombre)}">
         <div style="min-width:0">
@@ -67,7 +67,6 @@ export async function abrirFicha(nombre, perfil) {
     <div class="ohead"><button class="back">←</button><div class="ot">${f.nombre||nombre}</div></div>
     <div class="ocontent"></div></div>`);
   const c = ov.querySelector('.ocontent');
-  const desc = f.descuentoAutorizado!=null ? money(f.descuentoAutorizado)+' (autorizado)' : money(f.descuentoSugerido)+' (sugerido)';
   c.innerHTML = `
     <div class="fcard">
       <div class="fn">${f.nombre||nombre}</div>
@@ -91,8 +90,8 @@ export async function abrirFicha(nombre, perfil) {
       <div class="liqrow"><span>Capital pagado</span><b class="num">${money(f.capitalPagado)} · ${f.pctCapitalPagado}%</b></div>
       <div class="liqrow"><span>Capital pendiente</span><b class="num">${money(f.capitalPend)}</b></div>
       <div class="liqrow"><span>Interés pendiente</span><b class="num">${money(f.intPend)}</b></div>
-      <div class="liqrow hl"><span>Descuento / liquidación</span><b class="num">${desc}</b></div>
-      <div class="liqrow"><span>Liquidar al 50% interés</span><b class="num">${money(f.liquidar50)}</b></div>
+      <div class="liqrow hl"><span>Liquidar HOY (completo)</span><b class="num">${money(f.capitalPend + f.intPend)}</b></div>
+      <div class="liqrow"><span>Liquidar al 50% interés <i style="color:var(--slate);font-weight:400">(previa autorización)</i></span><b class="num">${money(f.liquidar50)}</b></div>
     </div>
     <div class="sec-h"><span class="t">Calendario de pagos</span><span class="ln"></span></div>
     <div class="fcard" style="padding:4px">

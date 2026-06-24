@@ -131,3 +131,9 @@ svg{display:block}
 .ejbar-h{display:flex;justify-content:space-between;font-size:.82em;margin-bottom:4px}
 .ejbar-t{height:8px;background:#EEF2F6;border-radius:5px;overflow:hidden}
 .ejbar-f{height:100%;background:linear-gradient(90deg,var(--steel),var(--navy));border-radius:5px}
+
+/* Pista de monto sugerido en pago */
+.hint{font-size:.72em;color:var(--navy);background:#EEF3F8;border-radius:8px;padding:8px 11px;margin:2px 0 4px}
+
+/* KPI interés cobrado */
+.kval.gold{color:var(--gold)}
