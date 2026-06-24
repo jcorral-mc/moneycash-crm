@@ -26,16 +26,16 @@
   .filtros{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
   .resumen{font-size:.8em;color:#7d94a3;font-weight:700;margin:6px 0 12px}
   .card{background:#fff;border-radius:12px;padding:12px 14px;margin-bottom:8px;box-shadow:0 1px 4px rgba(15,89,128,.07);border-left:4px solid #2fb344;cursor:pointer}
-  .card.liq{border-left-color:#9ab;opacity:.7}
-  .card.mora{border-left-color:#e8590c}
+  .card.liq{border-left-color:#9ab;opacity:.7}.card.mora{border-left-color:#e8590c}.card.nc{cursor:default}
   .card:active{transform:scale(.99)}
   .crow{display:flex;justify-content:space-between;align-items:center}
   .nom{font-weight:700;font-size:.92em}
   .meta{font-size:.71em;color:#7d94a3;margin-top:2px}
   .saldo{font-weight:800;color:#0f5980;font-size:.97em;text-align:right;white-space:nowrap}
-  .saldo.r{color:#e8590c}
+  .saldo.r{color:#e8590c}.saldo.g{color:#1c7c4a}
   .badge{font-size:.57em;font-weight:800;padding:2px 7px;border-radius:6px;display:inline-block;margin-top:3px}
   .badge.act{background:#d3f9d8;color:#2fb344}.badge.liq{background:#e7eef3;color:#5a7384}.badge.dias{background:#ffe3e3;color:#e8590c}
+  .badge.b{background:#e7f0f6;color:#0f5980}.badge.y{background:#fff3bf;color:#b5700c}.badge.gr{background:#d3f9d8;color:#2fb344}
   .loader{text-align:center;padding:30px;color:#7d94a3;font-weight:600}
   .kgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
   .kpi{background:#fff;border-radius:14px;padding:16px;box-shadow:0 1px 4px rgba(15,89,128,.07)}
@@ -50,18 +50,25 @@
   .rango .rc .n{font-size:1.15em;font-weight:900;color:#e8590c}
   .rango .rc .l{font-size:.56em;color:#9ab;font-weight:700;margin-top:2px}
   .nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e3eaf0;display:flex;z-index:20;box-shadow:0 -2px 10px rgba(0,0,0,.06)}
-  .nav button{flex:1;background:none;border:none;padding:9px 0 11px;cursor:pointer;color:#9ab;font-size:.66em;font-weight:700}
-  .nav button .ic{font-size:1.5em;display:block;margin-bottom:2px}
+  .nav button{flex:1;background:none;border:none;padding:9px 0 11px;cursor:pointer;color:#9ab;font-size:.64em;font-weight:700}
+  .nav button .ic{font-size:1.45em;display:block;margin-bottom:2px}
   .nav button.on{color:#0f5980}
-  /* FICHA */
-  #ficha{position:fixed;inset:0;background:#eef3f7;z-index:30;display:none;overflow-y:auto;padding-bottom:30px}
-  .fhead{background:#0f5980;color:#fff;padding:14px 16px;position:sticky;top:0;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
-  .fhead .back{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:1.1em;width:36px;height:36px;border-radius:9px;cursor:pointer}
+  .menugrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .menubtn{background:#fff;border:none;border-radius:14px;padding:20px 12px;text-align:center;cursor:pointer;box-shadow:0 1px 4px rgba(15,89,128,.07)}
+  .menubtn:active{transform:scale(.97)}
+  .menubtn .mi{font-size:1.8em;display:block;margin-bottom:6px}
+  .menubtn .ml{font-weight:700;font-size:.82em;color:#23323d}
+  .menubtn .md{font-size:.64em;color:#9ab;margin-top:2px}
+  .overlay{position:fixed;inset:0;background:#eef3f7;z-index:30;display:none;overflow-y:auto;padding-bottom:30px}
+  .ohead{background:#0f5980;color:#fff;padding:14px 16px;position:sticky;top:0;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.12);z-index:2}
+  .ohead .back{background:rgba(255,255,255,.2);border:none;color:#fff;font-size:1.1em;width:36px;height:36px;border-radius:9px;cursor:pointer}
   .pago{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;border-bottom:1px solid #f0f5f8;font-size:.83em}
-  .pago .izq{display:flex;align-items:center;gap:9px}
-  .pago .np{font-weight:700;color:#9ab;min-width:26px}
+  .pago .izq{display:flex;align-items:center;gap:9px}.pago .np{font-weight:700;color:#9ab;min-width:26px}
   .chip{font-size:.56em;font-weight:800;padding:2px 6px;border-radius:5px}
   .chip.pag{background:#d3f9d8;color:#2fb344}.chip.ven{background:#ffe3e3;color:#e8590c}.chip.pen{background:#e7f0f6;color:#5a7384}
+  .coment{background:#fff;border-radius:10px;padding:10px 12px;margin-bottom:7px;box-shadow:0 1px 3px rgba(15,89,128,.05)}
+  .coment .ch{display:flex;justify-content:space-between;font-size:.66em;color:#9ab;font-weight:700;margin-bottom:3px}
+  .coment .ct{font-size:.84em}
 </style>
 </head>
 <body>
@@ -84,18 +91,23 @@
       <div id="vista_inicio"></div>
       <div id="vista_cartera" style="display:none"></div>
       <div id="vista_cobranza" style="display:none"></div>
+      <div id="vista_mas" style="display:none"></div>
     </div>
     <div class="nav">
       <button id="nav_inicio" class="on" onclick="ir('inicio')"><span class="ic">📊</span>Inicio</button>
       <button id="nav_cartera" onclick="ir('cartera')"><span class="ic">📋</span>Cartera</button>
       <button id="nav_cobranza" onclick="ir('cobranza')"><span class="ic">💰</span>Cobranza</button>
+      <button id="nav_mas" onclick="ir('mas')"><span class="ic">⋯</span>Más</button>
     </div>
   </div>
 
-  <!-- FICHA DEL CLIENTE -->
-  <div id="ficha">
-    <div class="fhead"><button class="back" onclick="cerrarFicha()">←</button><div style="font-weight:800" id="fnom">Cliente</div></div>
-    <div class="wrap" id="fbody"><div class="loader">⏳ Cargando ficha...</div></div>
+  <div id="ficha" class="overlay">
+    <div class="ohead"><button class="back" onclick="cerrar('ficha')">←</button><div style="font-weight:800" id="fnom">Cliente</div></div>
+    <div class="wrap" id="fbody"><div class="loader">⏳ Cargando...</div></div>
+  </div>
+  <div id="seccion" class="overlay">
+    <div class="ohead"><button class="back" onclick="cerrar('seccion')">←</button><div style="font-weight:800" id="snom">Sección</div></div>
+    <div class="wrap" id="sbody"><div class="loader">⏳ Cargando...</div></div>
   </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -103,9 +115,10 @@
   const SUPABASE_URL='https://qlobqnzgdojghypbdeks.supabase.co';
   const SUPABASE_KEY='sb_publishable_YIFdSES9rZJuc8Z70X5riA_Oe9pdXlP';
   const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-  let CARTERA=[], MORA=[], COBRADO_MES=0, VISTA='inicio';
+  let CARTERA=[], MORA=[], COBRADO_MES=0, CACHE={};
   const f=n=>'$'+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0});
   const norm=s=>(s||'').toString().trim().toUpperCase();
+  const esc=s=>(s||'').toString().replace(/'/g,"\\'").replace(/"/g,'&quot;');
 
   async function init(){ const {data:{session}}=await db.auth.getSession(); session?mostrarApp(session):mostrarLogin(); }
   function mostrarLogin(){ document.getElementById('login').style.display='flex'; document.getElementById('app').style.display='none'; }
@@ -120,10 +133,11 @@
     if(error){eb.textContent='Correo o contraseña incorrectos.';eb.style.display='block';return;}
     document.getElementById('pass').value=''; mostrarApp(data.session);
   }
-  async function salir(){ await db.auth.signOut(); CARTERA=[];MORA=[]; mostrarLogin(); }
+  async function salir(){ await db.auth.signOut(); CARTERA=[];MORA=[];CACHE={}; mostrarLogin(); }
 
   async function cargarTodo(){
     document.getElementById('vista_inicio').innerHTML='<div class="loader">⏳ Cargando...</div>';
+    CACHE={};
     const r1=await db.from('cartera').select('*').order('saldo',{ascending:false}); CARTERA=r1.data||[];
     const hoy=new Date(); const corte=new Date(hoy.getTime()-3*86400000).toISOString().slice(0,10);
     const r2=await db.from('calendarios').select('cliente,monto_puntual,monto_impuntual,pagado,fecha,estatus').lt('fecha',corte);
@@ -140,17 +154,18 @@
       if(dias>acc[k].dias)acc[k].dias=dias;
     });
     MORA=Object.values(acc).filter(m=>m.mora>0).sort((a,b)=>b.mora-a.mora);
-    // Cobrado del mes (desde desglose)
     const ini=new Date(hoy.getFullYear(),hoy.getMonth(),1).toISOString().slice(0,10);
     const r3=await db.from('desglose').select('pago,fecha').gte('fecha',ini);
     COBRADO_MES=(r3.data||[]).reduce((s,d)=>s+Number(d.pago||0),0);
     pintarTodo();
   }
-  function recargar(){ cargarTodo(); }
+  function recargar(){ const v=document.querySelector('.nav .on'); cargarTodo(); }
+
   function ir(v){
-    VISTA=v;
-    ['inicio','cartera','cobranza'].forEach(x=>{document.getElementById('vista_'+x).style.display=(x===v?'block':'none');document.getElementById('nav_'+x).className=(x===v?'on':'');});
-    document.getElementById('ptit').textContent=v==='inicio'?'📊 Inicio':v==='cartera'?'📋 Cartera':'💰 Cobranza';
+    ['inicio','cartera','cobranza','mas'].forEach(x=>{document.getElementById('vista_'+x).style.display=(x===v?'block':'none');document.getElementById('nav_'+x).className=(x===v?'on':'');});
+    const t={inicio:'📊 Inicio',cartera:'📋 Cartera',cobranza:'💰 Cobranza',mas:'⋯ Más'};
+    document.getElementById('ptit').textContent=t[v];
+    if(v==='mas')pintarMas();
   }
   function pintarTodo(){ pintarInicio(); pintarCartera(); pintarCobranza(); }
 
@@ -199,7 +214,7 @@
     document.getElementById('resCart').textContent=l.length+' clientes · cartera '+f(l.reduce((s,c)=>s+Number(c.saldo||0),0));
     document.getElementById('listCart').innerHTML=l.map(c=>{
       const liq=Number(c.saldo||0)<=0;
-      return '<div class="card'+(liq?' liq':'')+'" onclick="abrirFicha(\''+(c.nombre||'').replace(/\x27/g,"\\\\\x27")+'\')"><div class="crow"><div style="min-width:0">'+
+      return '<div class="card'+(liq?' liq':'')+'" onclick="abrirFicha(\''+esc(c.nombre)+'\')"><div class="crow"><div style="min-width:0">'+
         '<div class="nom">'+(c.nombre||'')+'</div><div class="meta">👤 '+(c.ejecutivo||'—')+' · '+(c.frecuencia||'—')+' · capital '+f(c.capital)+'</div></div>'+
         '<div><div class="saldo">'+f(c.saldo)+'</div><div style="text-align:right"><span class="badge '+(liq?'liq':'act')+'">'+(liq?'LIQUIDADO':'CON SALDO')+'</span></div></div></div></div>';
     }).join('')||'<div class="loader">Sin resultados</div>';
@@ -220,27 +235,99 @@
     if(fe)l=l.filter(m=>m.ejecutivo===fe);
     document.getElementById('resCob').textContent=l.length+' en mora · total '+f(l.reduce((s,m)=>s+m.mora,0));
     document.getElementById('listCob').innerHTML=l.map(m=>
-      '<div class="card mora" onclick="abrirFicha(\''+(m.cliente||'').replace(/\x27/g,"\\\\\x27")+'\')"><div class="crow"><div style="min-width:0">'+
+      '<div class="card mora" onclick="abrirFicha(\''+esc(m.cliente)+'\')"><div class="crow"><div style="min-width:0">'+
       '<div class="nom">'+(m.cliente||'')+'</div><div class="meta">👤 '+(m.ejecutivo||'—')+'</div></div>'+
       '<div><div class="saldo r">'+f(m.mora)+'</div><div style="text-align:right"><span class="badge dias">'+m.dias+' días</span></div></div></div></div>'
     ).join('')||'<div class="loader">Nadie en mora 🎉</div>';
+  }
+
+  // ── MENÚ MÁS ──
+  function pintarMas(){
+    const secs=[
+      ['juridico','⚖️','Jurídico','Casos legales'],
+      ['visitas','📍','Visitas','Verificaciones'],
+      ['movimientos','🏦','Movimientos','Bancos'],
+      ['acreedores','🤝','Acreedores','Inversionistas'],
+      ['solicitudes_reno','🔄','Renos','Solicitudes'],
+      ['solicitudes_multa','⚠️','Multas','Solicitudes'],
+      ['autorizaciones','✅','Autorizaciones','Aprobaciones'],
+      ['comentarios_cobranza','💬','Comentarios','Notas cobranza'],
+    ];
+    document.getElementById('vista_mas').innerHTML='<div class="menugrid">'+
+      secs.map(s=>'<button class="menubtn" onclick="abrirSeccion(\''+s[0]+'\')"><span class="mi">'+s[1]+'</span><span class="ml">'+s[2]+'</span><div class="md">'+s[3]+'</div></button>').join('')+'</div>';
+  }
+
+  // ── SECCIONES (lista genérica, carga bajo demanda) ──
+  const DEF={
+    juridico:{tabla:'cartera_juridico',titulo:'⚖️ Jurídico',orden:'saldo_mc',busca:'cliente',
+      map:r=>({t:r.cliente,s:'👤 '+(r.ejecutivo||'—')+' · '+(r.estatus||''),a:f(r.saldo_mc),b:r.prox_diligencia?('Dilig: '+r.prox_diligencia):'',bc:'y'})},
+    visitas:{tabla:'visitas',titulo:'📍 Visitas',orden:'fecha',desc:true,busca:'cliente',
+      map:r=>({t:r.cliente||r.direccion||'—',s:(r.tipo||'')+' · '+(r.fecha||''),a:'',b:r.estatus||'',bc:'b'})},
+    movimientos:{tabla:'movimientos',titulo:'🏦 Movimientos',orden:'fecha',desc:true,busca:'concepto',
+      map:r=>({t:(r.concepto||r.tipo||'—'),s:(r.cuenta||'')+' · '+(r.fecha||''),a:f(r.monto),ac:(norm(r.tipo).indexOf('EGRESO')>=0?'r':'g'),b:r.tipo||'',bc:'b'})},
+    acreedores:{tabla:'acreedores',titulo:'🤝 Acreedores',orden:'saldo',desc:true,busca:'nombre',
+      map:r=>({t:r.nombre,s:(r.tipo||'')+' · '+(r.frecuencia||''),a:f(r.saldo),b:r.prox_pago?('Pago: '+r.prox_pago):'',bc:'y'})},
+    solicitudes_reno:{tabla:'solicitudes_reno',titulo:'🔄 Renos',orden:'fecha',desc:true,busca:'cliente_actual',
+      map:r=>({t:r.cliente_actual||'—',s:'👤 '+(r.ejecutivo||'—')+' · nuevo '+f(r.monto_nuevo),a:'',b:r.estatus||'',bc:'y'})},
+    solicitudes_multa:{tabla:'solicitudes_multa',titulo:'⚠️ Multas',orden:'fecha',desc:true,busca:'cliente',
+      map:r=>({t:r.cliente||'—',s:'👤 '+(r.ejecutivo||'—')+' · '+(r.motivo||''),a:f(r.monto_multa),b:r.estatus||'',bc:'y'})},
+    autorizaciones:{tabla:'autorizaciones',titulo:'✅ Autorizaciones',orden:'fecha',desc:true,busca:'referencia',
+      map:r=>({t:(r.tipo||'—')+' '+(r.referencia||''),s:'Solicita: '+(r.solicita||'—')+' · '+(r.fecha||''),a:'',b:r.estatus||'',bc:'b'})},
+    comentarios_cobranza:{tabla:'comentarios_cobranza',titulo:'💬 Comentarios',orden:'fecha',desc:true,busca:'cliente',
+      map:r=>({t:r.cliente||'—',s:(r.autor||'')+' · '+(r.fecha||''),a:'',b:r.estado||'',bc:'b',extra:r.comentario})},
+  };
+  async function abrirSeccion(tipo){
+    const d=DEF[tipo]; if(!d)return;
+    document.getElementById('seccion').style.display='block';
+    document.getElementById('snom').textContent=d.titulo;
+    document.getElementById('sbody').innerHTML='<div class="loader">⏳ Cargando...</div>';
+    if(!CACHE[tipo]){
+      let qy=db.from(d.tabla).select('*');
+      if(d.orden)qy=qy.order(d.orden,{ascending:!d.desc});
+      const r=await qy; CACHE[tipo]=r.data||[];
+    }
+    renderSeccion(tipo);
+  }
+  function renderSeccion(tipo){
+    const d=DEF[tipo], rows=CACHE[tipo]||[];
+    document.getElementById('sbody').innerHTML=
+      '<input type="text" class="f" id="bSec" placeholder="🔍 Buscar..." oninput="filtSeccion(\''+tipo+'\')">'+
+      '<div class="resumen" id="resSec">'+rows.length+' registros</div><div id="listSec"></div>';
+    pintaFilas(tipo,rows);
+  }
+  function filtSeccion(tipo){
+    const d=DEF[tipo], q=(document.getElementById('bSec').value||'').trim().toLowerCase();
+    const rows=(CACHE[tipo]||[]).filter(r=>(r[d.busca]||'').toString().toLowerCase().includes(q));
+    document.getElementById('resSec').textContent=rows.length+' registros';
+    pintaFilas(tipo,rows);
+  }
+  function pintaFilas(tipo,rows){
+    const d=DEF[tipo];
+    document.getElementById('listSec').innerHTML=rows.map(r=>{
+      const m=d.map(r);
+      return '<div class="card nc" style="border-left-color:#0f5980"><div class="crow"><div style="min-width:0">'+
+        '<div class="nom">'+(m.t||'')+'</div><div class="meta">'+(m.s||'')+'</div>'+
+        (m.extra?'<div style="font-size:.8em;margin-top:5px">'+m.extra+'</div>':'')+'</div>'+
+        '<div style="text-align:right">'+(m.a?'<div class="saldo '+(m.ac||'')+'">'+m.a+'</div>':'')+
+        (m.b?'<span class="badge '+(m.bc||'b')+'">'+m.b+'</span>':'')+'</div></div></div>';
+    }).join('')||'<div class="loader">Sin registros</div>';
   }
 
   // ── FICHA ──
   async function abrirFicha(nombre){
     document.getElementById('ficha').style.display='block';
     document.getElementById('fnom').textContent=nombre;
-    document.getElementById('fbody').innerHTML='<div class="loader">⏳ Cargando ficha...</div>';
+    document.getElementById('fbody').innerHTML='<div class="loader">⏳ Cargando...</div>';
     const c=CARTERA.find(x=>norm(x.nombre)===norm(nombre))||{};
-    const r=await db.from('calendarios').select('*').eq('cliente',nombre).order('n_pago',{ascending:true});
-    const cal=r.data||[];
+    const [rc,rcom]=await Promise.all([
+      db.from('calendarios').select('*').eq('cliente',nombre).order('n_pago',{ascending:true}),
+      db.from('comentarios_cobranza').select('*').eq('cliente',nombre).order('fecha',{ascending:false})
+    ]);
+    const cal=rc.data||[], coments=rcom.data||[];
     const hoyMs=new Date(new Date().toISOString().slice(0,10)).getTime();
     let pagados=0,pend=0,venc=0;
-    cal.forEach(p=>{
-      const pg=norm(p.estatus).indexOf('PAGADO')>=0;
-      if(pg)pagados++; else { if(new Date(p.fecha).getTime()<hoyMs)venc++; else pend++; }
-    });
-    let h='<div class="card" style="cursor:default;border-left:5px solid #0f5980">'+
+    cal.forEach(p=>{ const pg=norm(p.estatus).indexOf('PAGADO')>=0; if(pg)pagados++; else{ if(new Date(p.fecha).getTime()<hoyMs)venc++; else pend++; } });
+    let h='<div class="card nc" style="border-left:5px solid #0f5980">'+
       '<div style="font-weight:800;font-size:1.05em">'+(c.nombre||nombre)+'</div>'+
       '<div class="meta">👤 '+(c.ejecutivo||'—')+' · '+(c.frecuencia||'—')+'</div>'+
       '<div style="display:flex;justify-content:space-between;margin-top:10px">'+
@@ -252,20 +339,20 @@
         '<div class="rc"><div class="n" style="color:#2fb344">'+pagados+'</div><div class="l">PAGADOS</div></div>'+
         '<div class="rc"><div class="n" style="color:#5a7384">'+pend+'</div><div class="l">PENDIENTES</div></div>'+
         '<div class="rc"><div class="n">'+venc+'</div><div class="l">VENCIDOS</div></div>'+
-      '</div>'+
-      '<div class="sech">Calendario de pagos</div><div class="card" style="cursor:default;padding:4px">';
-    h+=cal.map(p=>{
-      const pg=norm(p.estatus).indexOf('PAGADO')>=0;
-      const vencido=!pg && new Date(p.fecha).getTime()<hoyMs;
-      const chip=pg?'<span class="chip pag">PAGADO</span>':vencido?'<span class="chip ven">VENCIDO</span>':'<span class="chip pen">PENDIENTE</span>';
-      const monto=pg?(p.pagado||p.monto_puntual):p.monto_puntual;
-      return '<div class="pago"><div class="izq"><span class="np">#'+(p.n_pago||'')+'</span><span>'+(p.fecha||'')+'</span></div>'+
-        '<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700">'+f(monto)+'</span>'+chip+'</div></div>';
-    }).join('')||'<div class="loader">Sin calendario</div>';
-    h+='</div>';
+      '</div>';
+    h+='<div class="sech">Calendario de pagos</div><div class="card nc" style="padding:4px">'+
+      (cal.map(p=>{
+        const pg=norm(p.estatus).indexOf('PAGADO')>=0, vencido=!pg&&new Date(p.fecha).getTime()<hoyMs;
+        const chip=pg?'<span class="chip pag">PAGADO</span>':vencido?'<span class="chip ven">VENCIDO</span>':'<span class="chip pen">PENDIENTE</span>';
+        const monto=pg?(p.pagado||p.monto_puntual):p.monto_puntual;
+        return '<div class="pago"><div class="izq"><span class="np">#'+(p.n_pago||'')+'</span><span>'+(p.fecha||'')+'</span></div>'+
+          '<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:700">'+f(monto)+'</span>'+chip+'</div></div>';
+      }).join('')||'<div class="loader">Sin calendario</div>')+'</div>';
+    h+='<div class="sech">Comentarios de cobranza</div>'+
+      (coments.map(cm=>'<div class="coment"><div class="ch"><span>'+(cm.autor||'—')+(cm.estado?(' · '+cm.estado):'')+'</span><span>'+(cm.fecha||'')+'</span></div><div class="ct">'+(cm.comentario||'')+'</div></div>').join('')||'<div class="loader" style="padding:14px">Sin comentarios</div>');
     document.getElementById('fbody').innerHTML=h;
   }
-  function cerrarFicha(){ document.getElementById('ficha').style.display='none'; }
+  function cerrar(id){ document.getElementById(id).style.display='none'; }
 
   init();
 </script>
