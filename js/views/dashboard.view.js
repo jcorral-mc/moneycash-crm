@@ -9,6 +9,8 @@ import { abrirMovimientos } from './movimientos.view.js';
 import { abrirAcreedores } from './acreedores.view.js';
 import { abrirClientes } from './clientes.view.js';
 import { abrirCobranza } from './cobranza.view.js';
+import { abrirVisitas } from './visitas.view.js';
+import { abrirJuridico } from './juridico.view.js';
 
 export async function renderDashboard(perfil) {
   const root = el('<div class="view"><div class="loader">Cargando indicadores…</div></div>');
@@ -21,6 +23,8 @@ export async function renderDashboard(perfil) {
   const adminAux = ['ADMIN','AUX_ADMIN'].includes(rol);
   const puedeConciliar = ['ADMIN','GERENTE','AUX_ADMIN'].includes(rol);
   const veSolicitudes = ['ADMIN','GERENTE'].includes(rol);
+  const veVisitas = ['ADMIN','GERENTE','AUX_ADMIN','JURIDICO','VISITAS'].includes(rol);
+  const veJuridico = ['ADMIN','GERENTE','JURIDICO'].includes(rol);
 
   let pendConc = 0, nSol = 0;
   if (puedeConciliar) pendConc = await contarPendientesConciliar();
@@ -47,6 +51,10 @@ export async function renderDashboard(perfil) {
       { k:'cartera',  t:'Cartera',       s:'Clientes y fichas',            show:true },
       { k:'cobranza', t:'Cobranza',      s:'Prioridad y mora',             show:true },
       { k:'conc',     t:'Conciliación',  s:'Pagos por revisar y aplicar',  show:puedeConciliar, badge:pendConc },
+    ]},
+    { titulo:'Operación', items:[
+      { k:'visitas', t:'Visitas', s:'Verificación, cobranza, jurídico, mensajería', show:veVisitas },
+      { k:'juridico', t:'Jurídico', s:'Casos, convenios, abonos y diligencias', show:veJuridico },
     ]},
     { titulo:'Finanzas', items:[
       { k:'bancos', t:'Bancos',      s:'Saldos, movimientos, transferencias', show:finanzas },
@@ -78,6 +86,8 @@ export async function renderDashboard(perfil) {
   // Handlers
   const on = (k, fn) => { const b = root.querySelector('#g-'+k); if (b) b.addEventListener('click', fn); };
   on('cartera',  () => abrirClientes(perfil));
+  on('visitas',  () => abrirVisitas(perfil));
+  on('juridico', () => abrirJuridico(perfil));
   on('cobranza', () => abrirCobranza(perfil));
   on('conc',     () => abrirConciliacion(perfil, () => reload(perfil)));
   on('bancos',   () => abrirBancos(perfil));
