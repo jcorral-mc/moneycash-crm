@@ -18,6 +18,7 @@ import { abrirCuentas } from './cuentas.view.js';
 import { abrirCompensaciones } from './compensaciones.view.js';
 import { abrirReactivaciones } from './reactivaciones.view.js';
 import { abrirDesglose } from './desglose.view.js';
+import { abrirTuberia } from './tuberia.view.js';
 import { contarPendientes as contarAutorizaciones } from '../repositories/autorizaciones.repo.js';
 
 export async function renderDashboard(perfil) {
@@ -32,6 +33,7 @@ export async function renderDashboard(perfil) {
   const puedeConciliar = ['ADMIN','GERENTE','AUX_ADMIN'].includes(rol);
   const veSolicitudes = ['ADMIN','GERENTE'].includes(rol);
   const veVisitas = ['ADMIN','GERENTE','AUX_ADMIN','JURIDICO','VISITAS'].includes(rol);
+  const veTuberia = ['ADMIN','GERENTE','AUX_ADMIN','EJECUTIVO'].includes(rol);
   const veJuridico = ['ADMIN','GERENTE','JURIDICO'].includes(rol);
 
   let pendConc = 0, nSol = 0;
@@ -62,6 +64,9 @@ export async function renderDashboard(perfil) {
       { k:'micomision', t:'Mi comisión', s:'Tu cumplimiento y comisión del mes', show:esEjecutivo },
       { k:'reactiv', t:'Reactivaciones', s:'Clientes liquidados para nuevo crédito', show:true },
       { k:'desglose', t:'Desglose de cobros', s:'Consulta y exporta cobros del mes', show:true },
+    ]},
+    { titulo:'Tubería', items:[
+      { k:'tuberia', t:'Tubería', s:'Cotizador y pipeline de prospectos', show:veTuberia },
     ]},
     { titulo:'Operación', items:[
       { k:'visitas', t:'Visitas', s:'Verificación, cobranza, jurídico, mensajería', show:veVisitas },
@@ -108,6 +113,7 @@ export async function renderDashboard(perfil) {
   on('compen',   () => abrirCompensaciones(perfil));
   on('reactiv',  () => abrirReactivaciones(perfil));
   on('desglose', () => abrirDesglose(perfil));
+  on('tuberia',  () => abrirTuberia(perfil));
   on('conc',     () => abrirConciliacion(perfil, () => reload(perfil)));
   on('bancos',   () => abrirBancos(perfil));
   on('movs',     () => abrirMovimientos(perfil));
