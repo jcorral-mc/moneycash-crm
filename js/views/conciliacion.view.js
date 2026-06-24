@@ -3,6 +3,7 @@ import { el, money } from '../lib/dom.js';
 import { fetchCartera, fetchCalendarioCliente } from '../repositories/clientes.repo.js';
 import { fetchPendientes, marcarPendiente, ejecutarPlan } from '../repositories/conciliacion.repo.js';
 import { planAplicarPago } from '../services/conciliacion.service.js';
+import { logAudit } from '../lib/audit.js';
 
 const norm = s => String(s||'').trim().toUpperCase();
 
@@ -36,7 +37,7 @@ export async function abrirConciliacion(perfil, onDone) {
       </div>`).join('');
 
     list.querySelectorAll('[data-ap]').forEach(b => b.addEventListener('click', () => aprobar(b.dataset.ap, pend)));
-    list.querySelectorAll('[data-rj]').forEach(b => b.addEventListener('click', async () => { await marcarPendiente(b.dataset.rj,'RECHAZADO',perfil.email); pinta(); }));
+    list.querySelectorAll('[data-rj]').forEach(b => b.addEventListener('click', async () => { const pp=pend.find(x=>String(x.id)===String(b.dataset.rj)); await marcarPendiente(b.dataset.rj,'RECHAZADO',perfil.email); await logAudit(perfil,'CONCILIACION_RECHAZADA', pp?pp.cliente:b.dataset.rj, pp?`${pp.tipo} $${pp.monto}`:''); pinta(); }));
     c.querySelector('#cc-todos').addEventListener('click', async () => { for (const p of pend) { await aprobar(p.id, pend, true); } pinta(); });
   }
 
@@ -49,6 +50,7 @@ export async function abrirConciliacion(perfil, onDone) {
       const cal = await fetchCalendarioCliente(p.cliente);
       const plan = planAplicarPago(cRow, cal, p);
       await ejecutarPlan(plan, cRow.id, p.id, perfil.email);
+      await logAudit(perfil, 'CONCILIACION_APLICADA', p.cliente, `${plan.detalle} · saldo→${plan.saldo}`);
       if (!masivo) { alert('✅ ' + plan.detalle); pinta(); }
     } catch (e) {
       if (!masivo) alert('❌ ' + (e.message||'No se pudo aplicar.'));

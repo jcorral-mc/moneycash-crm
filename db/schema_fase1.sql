@@ -15,6 +15,7 @@ drop table if exists solicitudes_multa   cascade;
 drop table if exists calendarios         cascade;
 drop table if exists movimientos         cascade;
 drop table if exists autorizaciones      cascade;
+drop table if exists auditoria           cascade;
 drop table if exists accesos             cascade;
 drop table if exists perfiles            cascade;
 drop table if exists cartera             cascade;
@@ -214,6 +215,18 @@ create table accesos (
 -- ════════════════════════════════════════════════════════════════
 -- FUNCIONES DE ROL (para RLS por ejecutivo, a nivel base de datos)
 -- ════════════════════════════════════════════════════════════════
+-- ───────────── AUDITORÍA (bitácora de acciones críticas) ─────────────
+create table auditoria (
+  id        bigint generated always as identity primary key,
+  fecha     timestamptz default now(),
+  usuario   text,
+  rol       text,
+  accion    text,    -- ALTA_CLIENTE / PAGO_REGISTRADO / CONCILIACION_APLICADA / CONCILIACION_RECHAZADA / CAMBIO_SALDO
+  entidad   text,    -- cliente / crédito / id de pago
+  detalle   text
+);
+create index idx_audit_fecha on auditoria(fecha);
+
 create or replace function auth_rol() returns text
   language sql security definer stable as $$
   select coalesce((select rol from perfiles where email = auth.jwt()->>'email' and activo limit 1),'ADMIN')
@@ -276,6 +289,11 @@ create policy desglose_del on desglose for delete to authenticated using (true);
 
 -- ════════════════════════════════════════════════════════════════
 -- SEEDS (roles del equipo MoneyCash)
+-- Auditoría: cualquiera autenticado puede escribir; solo admin/gerente leer.
+alter table auditoria enable row level security;
+create policy aud_ins on auditoria for insert to authenticated with check (true);
+create policy aud_sel on auditoria for select to authenticated using (auth_rol() in ('ADMIN','GERENTE'));
+
 -- Sustituye los correos por los reales al crear los usuarios en Auth.
 -- Jorge sin perfil = ADMIN por defecto (fallback en el front).
 -- ════════════════════════════════════════════════════════════════

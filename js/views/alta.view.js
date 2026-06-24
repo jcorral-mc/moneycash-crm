@@ -3,6 +3,7 @@
 import { el, money } from '../lib/dom.js';
 import { vistaPrevia, construirAlta } from '../services/calendario.service.js';
 import { existeCliente, crearAlta } from '../repositories/alta.repo.js';
+import { logAudit } from '../lib/audit.js';
 
 export function abrirAlta(perfil, onDone) {
   if (!['ADMIN','AUX_ADMIN'].includes(perfil.rol)) { alert('Solo administración puede dar de alta clientes.'); return; }
@@ -66,6 +67,7 @@ export function abrirAlta(perfil, onDone) {
       if (await existeCliente(d.nombre.trim())) { if (!confirm('Ese cliente ya existe en cartera. ¿Crear de todos modos? (puede duplicar)')) return; }
       const { cartera, calendarioRows, resumen } = construirAlta(d);
       await crearAlta(cartera, calendarioRows);
+      await logAudit(perfil, 'ALTA_CLIENTE', cartera.nombre, `capital ${resumen.capital}, ${resumen.nPagos} pagos, ${cartera.frecuencia}`);
       alert(`✅ ${cartera.nombre} dado de alta. Capital ${money(resumen.capital)}, ${resumen.nPagos} pagos.`);
       ov.remove(); if (onDone) onDone();
     } catch (e) { err.textContent = e.message||'No se pudo dar de alta.'; err.style.display='block'; }

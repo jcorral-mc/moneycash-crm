@@ -3,6 +3,10 @@ import { el, money } from '../lib/dom.js';
 import { construirResumen } from '../services/dashboard.service.js';
 import { fetchCarteraResumen, fetchDesgloseMes, contarPendientesConciliar, contarSolicitudes } from '../repositories/dashboard.repo.js';
 import { abrirConciliacion } from './conciliacion.view.js';
+import { abrirExport } from './export.view.js';
+import { abrirBancos } from './bancos.view.js';
+import { abrirMovimientos } from './movimientos.view.js';
+import { abrirAcreedores } from './acreedores.view.js';
 
 export async function renderDashboard(perfil) {
   const root = el('<div class="view"><div class="loader">Cargando indicadores…</div></div>');
@@ -38,6 +42,18 @@ export async function renderDashboard(perfil) {
     ${veSolicitudes ? `<div class="btn-card" style="cursor:default">
         <div><div class="bc-t">Autorizaciones</div><div class="bc-s">Solicitudes pendientes (multa/liquidación)</div></div>
         <div class="bc-n ${nSol>0?'on':''}">${nSol}</div></div>` : ''}
+    ${['ADMIN','GERENTE','AUX_ADMIN'].includes(perfil.rol) ? `<button class="btn-card" id="d-bancos">
+        <div><div class="bc-t">Bancos</div><div class="bc-s">Saldos, movimientos, transferencias</div></div>
+        <div class="bc-n">$</div></button>` : ''}
+    ${['ADMIN','AUX_ADMIN'].includes(perfil.rol) ? `<button class="btn-card" id="d-movs">
+        <div><div class="bc-t">Movimientos</div><div class="bc-s">Gastos, nómina, intereses, diligencias</div></div>
+        <div class="bc-n">↹</div></button>` : ''}
+    ${['ADMIN','GERENTE','AUX_ADMIN'].includes(perfil.rol) ? `<button class="btn-card" id="d-acre">
+        <div><div class="bc-t">Acreedores</div><div class="bc-s">Inversionistas y lo que se les debe</div></div>
+        <div class="bc-n">◷</div></button>` : ''}
+    ${['ADMIN','AUX_ADMIN'].includes(perfil.rol) ? `<button class="btn-card" id="d-export">
+        <div><div class="bc-t">Exportar / Respaldo</div><div class="bc-s">Descargar tablas en CSV</div></div>
+        <div class="bc-n">⬇</div></button>` : ''}
 
     ${(perfil.rol!=='EJECUTIVO' && r.porEjecutivo.length) ? `
       <div class="sec-h"><span class="t">Cartera por ejecutivo</span><span class="ln"></span></div>
@@ -49,6 +65,14 @@ export async function renderDashboard(perfil) {
           </div>`).join('')}
       </div>` : ''}`;
 
+  const bAcr = root.querySelector('#d-acre');
+  if (bAcr) bAcr.addEventListener('click', () => abrirAcreedores(perfil));
+  const bMov = root.querySelector('#d-movs');
+  if (bMov) bMov.addEventListener('click', () => abrirMovimientos(perfil));
+  const bBan = root.querySelector('#d-bancos');
+  if (bBan) bBan.addEventListener('click', () => abrirBancos(perfil));
+  const bExp = root.querySelector('#d-export');
+  if (bExp) bExp.addEventListener('click', () => abrirExport(perfil));
   const bConc = root.querySelector('#d-conc');
   if (bConc) bConc.addEventListener('click', () => abrirConciliacion(perfil, () => reload(perfil)));
   return root;

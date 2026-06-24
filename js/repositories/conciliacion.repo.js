@@ -1,5 +1,6 @@
 // Repositorio de Conciliación — lee pendientes y EJECUTA el plan de aplicación.
 import { db } from '../lib/supabase.js';
+import { agregarMovimientoBanco } from './bancos.repo.js';
 
 export async function fetchPendientes() {
   const { data } = await db.from('pagos_pendientes').select('*').eq('estatus','PENDIENTE').order('created_at',{ascending:true});
@@ -33,15 +34,14 @@ export async function ejecutarPlan(plan, carteraId, pendienteId, por) {
     const { error } = await db.from('cartera').update(patch).eq('id', carteraId);
     if (error) throw error;
   }
-  // 4) Banco (ingreso) + obtener banco_id para el desglose
+  // 4) Banco (ingreso por cobranza) → libro mayor de movimientos + saldo, y banco_id para el desglose
   let bancoId = null;
   if (plan.cuenta) {
-    const { data: b } = await db.from('bancos').select('id,ingresos,saldo_sistema').ilike('cuenta', plan.cuenta).maybeSingle();
-    if (b) {
-      bancoId = b.id;
-      if (plan.bancoIngreso > 0) {
-        await db.from('bancos').update({ ingresos:(Number(b.ingresos)||0)+plan.bancoIngreso, saldo_sistema:(Number(b.saldo_sistema)||0)+plan.bancoIngreso }).eq('id', b.id);
-      }
+    const { data: b0 } = await db.from('bancos').select('id').ilike('cuenta', plan.cuenta).maybeSingle();
+    bancoId = b0 ? b0.id : null;
+    if (plan.bancoIngreso > 0) {
+      await agregarMovimientoBanco({ tipo:'INGRESO', cuenta:plan.cuenta, monto:plan.bancoIngreso,
+        concepto:'Cobranza '+plan.cliente, origen:'COBRANZA', obs:plan.detalle||'' }, { email: por });
     }
   }
   // 5) Desglose (uno por concepto: abono y multa van separados)

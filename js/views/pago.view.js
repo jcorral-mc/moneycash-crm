@@ -4,6 +4,7 @@ import { el, money } from '../lib/dom.js';
 import { fetchCartera, fetchCalendarioCliente } from '../repositories/clientes.repo.js';
 import { fetchPendientesByCliente, fetchBancos, insertPendiente } from '../repositories/pagos.repo.js';
 import { registrarPagoPendiente, infoPago } from '../services/pagos.service.js';
+import { logAudit } from '../lib/audit.js';
 
 /** Abre el formulario de aplicar pago para un cliente (overlay). */
 export async function abrirAplicarPago(nombre, perfil, onDone) {
@@ -69,6 +70,7 @@ export async function abrirAplicarPago(nombre, perfil, onDone) {
     try {
       const { record, msg } = registrarPagoPendiente(cRow, cal, pend, datos, perfil);
       await insertPendiente(record);
+      await logAudit(perfil, 'PAGO_REGISTRADO', nombre, `${record.tipo} $${record.monto} (cap ${record.capital} + int ${record.interes}${record.multa>0?' + multa '+record.multa:''})`);
       alert(msg);
       ov.remove();
       if (onDone) onDone();
