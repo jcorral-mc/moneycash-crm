@@ -332,6 +332,7 @@
   }
 
   const ICON={
+    finanzas:'<path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/>',
     juridico:'<path d="M12 3v18M5 7l7-4 7 4M5 7l-2 6a4 4 0 0 0 8 0L9 7M19 7l-2 6a4 4 0 0 0 8 0l-2-6"/>',
     visitas:'<path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
     movimientos:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/>',
@@ -342,7 +343,7 @@
     comentarios_cobranza:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
   };
   function pintarMas(){
-    const secs=[['juridico','Jurídico','Casos legales'],['visitas','Visitas','Verificaciones'],['movimientos','Movimientos','Bancos'],['acreedores','Acreedores','Inversionistas'],['solicitudes_reno','Renos','Solicitudes'],['solicitudes_multa','Multas','Solicitudes'],['autorizaciones','Autorizaciones','Aprobaciones'],['comentarios_cobranza','Comentarios','Notas cobranza']];
+    const secs=[['finanzas','Finanzas','Ingresos y gastos'],['juridico','Jurídico','Casos legales'],['visitas','Visitas','Verificaciones'],['movimientos','Movimientos','Bancos'],['acreedores','Acreedores','Inversionistas'],['solicitudes_reno','Renos','Solicitudes'],['solicitudes_multa','Multas','Solicitudes'],['autorizaciones','Autorizaciones','Aprobaciones'],['comentarios_cobranza','Comentarios','Notas cobranza']];
     document.getElementById('vista_mas').innerHTML='<div class="menugrid">'+secs.map(s=>
       '<button class="menubtn" onclick="abrirSeccion(\''+s[0]+'\')"><div class="mi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+(ICON[s[0]]||'')+'</svg></div><div class="ml">'+s[1]+'</div><div class="md">'+s[2]+'</div></button>').join('')+'</div>';
   }
@@ -357,7 +358,44 @@
     autorizaciones:{tabla:'autorizaciones',titulo:'Autorizaciones',orden:'fecha',desc:true,busca:'referencia',map:r=>({t:(r.tipo||'—')+' '+(r.referencia||''),s:'Solicita '+(r.solicita||'—')+' · '+(r.fecha||''),a:'',b:r.estatus||'',bc:'b'})},
     comentarios_cobranza:{tabla:'comentarios_cobranza',titulo:'Comentarios',orden:'fecha',desc:true,busca:'cliente',map:r=>({t:r.cliente||'—',s:(r.autor||'')+' · '+(r.fecha||''),a:'',b:r.estado||'',bc:'b',extra:r.comentario})},
   };
+  async function abrirFinanzas(){
+    document.getElementById('seccion').style.display='block';
+    document.getElementById('snom').textContent='Finanzas';
+    document.getElementById('sbody').innerHTML='<div class="loader">Cargando…</div>';
+    const hoy=new Date(); const ini=new Date(hoy.getFullYear(),hoy.getMonth(),1).toISOString().slice(0,10);
+    const [rd,rm]=await Promise.all([
+      db.from('desglose').select('pago,capital,interes,fecha').gte('fecha',ini),
+      db.from('movimientos').select('tipo,monto,fecha,concepto,subconcepto').gte('fecha',ini)
+    ]);
+    const des=rd.data||[], mov=rm.data||[];
+    const cobrado=des.reduce((s,d)=>s+Number(d.pago||0),0);
+    const interes=des.reduce((s,d)=>s+Number(d.interes||0),0);
+    const capital=des.reduce((s,d)=>s+Number(d.capital||0),0);
+    const egresos=mov.filter(m=>norm(m.tipo).indexOf('EGRESO')>=0);
+    const gastos=egresos.reduce((s,m)=>s+Number(m.monto||0),0);
+    const ingresos=interes;            // ingreso real = intereses cobrados (multas/comisiones se afinan luego)
+    const ganancia=ingresos-gastos;
+    const mesTxt=hoy.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+    // gastos por concepto
+    const porCon={}; egresos.forEach(m=>{const k=(m.concepto||m.subconcepto||'Otros');porCon[k]=(porCon[k]||0)+Number(m.monto||0);});
+    const cons=Object.entries(porCon).sort((a,b)=>b[1]-a[1]);
+    document.getElementById('sbody').innerHTML=
+      '<div class="resumen" style="text-transform:capitalize">📅 '+mesTxt+'</div>'+
+      '<div class="kcard" style="margin-bottom:12px;border-left:0"><div class="klab">Ganancia del mes</div>'+
+        '<div class="kval num" style="font-size:2em;color:'+(ganancia>=0?'var(--green)':'var(--red)')+'">'+f(ganancia)+'</div>'+
+        '<div class="kfoot">ingresos − gastos</div></div>'+
+      '<div class="kbig">'+
+        '<div class="kcard k-cob"><div class="klab">Ingresos (intereses)</div><div class="kval g num">'+f(ingresos)+'</div><div class="kfoot">interés cobrado</div></div>'+
+        '<div class="kcard k-mora"><div class="klab">Gastos del mes</div><div class="kval r num">'+f(gastos)+'</div><div class="kfoot">'+egresos.length+' egresos</div></div>'+
+        '<div class="kcard"><div class="klab">Cobrado total</div><div class="kval num">'+f(cobrado)+'</div><div class="kfoot">capital + interés</div></div>'+
+        '<div class="kcard k-cli"><div class="klab">Capital devuelto</div><div class="kval num">'+f(capital)+'</div><div class="kfoot">no es ingreso</div></div>'+
+      '</div>'+
+      '<div class="sec-h"><span class="t">Gastos por concepto</span><span class="ln"></span></div>'+
+      (cons.map(([k,v])=>'<div class="ej"><div class="nm">'+k+'</div><div class="vv num" style="color:var(--ink2)">'+f(v)+'</div></div>').join('')||'<div class="loader">Sin gastos este mes</div>')+
+      '<div class="coment" style="margin-top:12px"><div class="ct" style="font-size:.78em;color:var(--slate)">El interés cobrado es el ingreso real; el capital es devolución a inversionistas. Multas y comisiones por apertura se sumarán al afinar. Gastos = egresos registrados en bancos.</div></div>';
+  }
   async function abrirSeccion(tipo){
+    if(tipo==='finanzas'){ return abrirFinanzas(); }
     const d=DEF[tipo]; if(!d)return;
     document.getElementById('seccion').style.display='block';
     document.getElementById('snom').textContent=d.titulo;
