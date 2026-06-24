@@ -107,3 +107,12 @@ export async function abrirFicha(nombre, perfil) {
   if (btnPago) btnPago.addEventListener('click', () => abrirAplicarPago(nombre, perfil, () => { ov.remove(); abrirFicha(nombre, perfil); }));
   document.body.appendChild(ov);
 }
+
+// Abre Cartera/Clientes como overlay (desde el inicio agrupado).
+export async function abrirClientes(perfil) {
+  const ov = el(`<div class="overlay"><div class="ohead"><button class="back">←</button><div class="ot">Cartera / Clientes</div></div><div class="ocontent"><div class="loader">Cargando…</div></div></div>`);
+  document.body.appendChild(ov);
+  ov.querySelector('.back').addEventListener('click', () => ov.remove());
+  const node = await renderClientes(perfil);
+  const c = ov.querySelector('.ocontent'); c.innerHTML=''; c.appendChild(node);
+}

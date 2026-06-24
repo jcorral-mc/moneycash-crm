@@ -22,7 +22,7 @@ body{font-family:'IBM Plex Sans',-apple-system,sans-serif;background:var(--bg);c
 .login-err{background:#FBEAE7;color:var(--red);padding:11px;border-radius:9px;font-size:.8em;font-weight:500;margin-top:14px;display:none}
 
 /* HEADER + NAV */
-.app{padding-bottom:80px}
+.app{padding-bottom:24px}
 .hdr{background:linear-gradient(180deg,var(--ink),var(--navy));color:#fff;padding:15px 18px 17px;position:sticky;top:0;z-index:10}
 .hdr-top{display:flex;align-items:center;justify-content:space-between}
 .brand{display:flex;align-items:center;gap:9px}

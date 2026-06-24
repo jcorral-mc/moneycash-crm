@@ -67,3 +67,12 @@ function abrirComentario(cliente, perfil) {
     } catch (e) { err.textContent = e.message||'No se pudo guardar.'; err.style.display='block'; }
   });
 }
+
+// Abre Cobranza como overlay (desde el inicio agrupado).
+export async function abrirCobranza(perfil) {
+  const ov = el(`<div class="overlay"><div class="ohead"><button class="back">←</button><div class="ot">Cobranza</div></div><div class="ocontent"><div class="loader">Cargando…</div></div></div>`);
+  document.body.appendChild(ov);
+  ov.querySelector('.back').addEventListener('click', () => ov.remove());
+  const node = await renderCobranza(perfil);
+  const c = ov.querySelector('.ocontent'); c.innerHTML=''; c.appendChild(node);
+}

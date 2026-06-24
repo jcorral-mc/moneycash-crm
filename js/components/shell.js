@@ -9,7 +9,7 @@ const ICONS = {
 };
 
 /** Monta el shell y devuelve { root, content, setActive } */
-export function renderShell(perfil, nav, handlers) {
+export function renderShell(perfil, handlers) {
   const root = el(`
     <div class="app">
       <header class="hdr">
@@ -26,27 +26,10 @@ export function renderShell(perfil, nav, handlers) {
         </div>
       </header>
       <main class="content" id="content"></main>
-      <nav class="nav"></nav>
     </div>`);
-
-  const navEl = root.querySelector('.nav');
-  nav.forEach((item,i) => {
-    const b = el(`<button data-view="${item.id}" class="${i===0?'on':''}">
-      ${i===0?'<span class="dot"></span>':''}
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">${ICONS[item.id]||''}</svg>
-      <span class="lb">${item.label}</span></button>`);
-    b.addEventListener('click', () => handlers.onNav(item.id, b));
-    navEl.appendChild(b);
-  });
 
   root.querySelector('[data-act="reload"]').addEventListener('click', handlers.onReload);
   root.querySelector('[data-act="logout"]').addEventListener('click', handlers.onLogout);
 
-  const setActive = (id) => {
-    [...navEl.children].forEach(b => { b.className=''; const d=b.querySelector('.dot'); if(d)d.remove(); });
-    const act = navEl.querySelector(`[data-view="${id}"]`);
-    if (act){ act.className='on'; const dot=document.createElement('span'); dot.className='dot'; act.prepend(dot); }
-  };
-
-  return { root, content: root.querySelector('#content'), setActive };
+  return { root, content: root.querySelector('#content') };
 }
