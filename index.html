@@ -101,8 +101,9 @@
 
   /* menú Más */
   .menugrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-  .menubtn{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 12px;text-align:center;cursor:pointer;font-family:inherit;color:var(--ink2)}
+  .menubtn{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 12px;text-align:center;cursor:pointer;font-family:inherit;color:var(--ink2);position:relative}
   .menubtn:active{transform:scale(.98)}
+  .badge-n{position:absolute;top:9px;right:9px;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--red);color:#fff;font-size:.62em;font-weight:700;display:flex;align-items:center;justify-content:center}
   .menubtn .mi{width:38px;height:38px;border-radius:10px;background:#EEF3F8;color:var(--navy);display:flex;align-items:center;justify-content:center;margin:0 auto 9px}
   .menubtn .ml{font-weight:600;font-size:.82em}
   .menubtn .md{font-size:.63em;color:var(--slate);margin-top:2px}
@@ -172,14 +173,12 @@
       <div id="vista_inicio"></div>
       <div id="vista_cartera" style="display:none"></div>
       <div id="vista_cobranza" style="display:none"></div>
-      <div id="vista_mas" style="display:none"></div>
     </div>
 
     <div class="nav">
       <button id="nav_inicio" class="on" onclick="ir('inicio',this)"><span class="dot"></span><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="11" width="7" height="10" rx="1.5"/><rect x="3" y="15" width="7" height="6" rx="1.5"/></svg><span class="lb">Inicio</span></button>
       <button id="nav_cartera" onclick="ir('cartera',this)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="lb">Cartera</span></button>
       <button id="nav_cobranza" onclick="ir('cobranza',this)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 17l5-5 4 3 7-8"/><path d="M16 4h5v5"/></svg><span class="lb">Cobranza</span></button>
-      <button id="nav_mas" onclick="ir('mas',this)"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg><span class="lb">Más</span></button>
     </div>
   </div>
 
@@ -213,7 +212,7 @@
   const SUPABASE_KEY='sb_publishable_YIFdSES9rZJuc8Z70X5riA_Oe9pdXlP';
   const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
   let CARTERA=[], MORA=[], CALByCli={}, COBRADO_MES=0, CACHE={}, FICHA_CLIENTE='';
-  let ROL='ADMIN', EJECUTIVO='', NOMBRE='';
+  let ROL='ADMIN', EJECUTIVO='', NOMBRE='', PENDCOUNT={};
   const GRACIA=3;
   const f=n=>'$'+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0});
   const norm=s=>(s||'').toString().trim().toUpperCase();
@@ -278,15 +277,28 @@
     const im=new Date(hoy.getFullYear(),hoy.getMonth(),1).toISOString().slice(0,10);
     const r3=await db.from('desglose').select('pago,fecha').gte('fecha',im);
     COBRADO_MES=(r3.data||[]).reduce((s,d)=>s+Number(d.pago||0),0);
+    // Conteos de pendientes (para badges en módulos)
+    PENDCOUNT={};
+    if(ROL==='ADMIN'||ROL==='GERENTE'){
+      const mk=(t,fn)=>{let q=db.from(t).select('*',{count:'exact',head:true});return fn(q);};
+      try{
+        const [a,re,mu,vi]=await Promise.all([
+          mk('autorizaciones',q=>q.ilike('estatus','%PENDIENTE%')),
+          mk('solicitudes_reno',q=>q.ilike('estatus','%PENDIENTE%')),
+          mk('solicitudes_multa',q=>q.ilike('estatus','%PENDIENTE%')),
+          mk('visitas',q=>q.not('estatus','ilike','%REALIZ%'))
+        ]);
+        PENDCOUNT={autorizaciones:a.count||0,solicitudes_reno:re.count||0,solicitudes_multa:mu.count||0,visitas:vi.count||0};
+      }catch(e){}
+    }
     pintarInicio(); pintarCartera(); pintarCobranza();
   }
   function recargar(){ cargarTodo(); }
 
   function ir(v,btn){
-    ['inicio','cartera','cobranza','mas'].forEach(x=>document.getElementById('vista_'+x).style.display=(x===v?'block':'none'));
+    ['inicio','cartera','cobranza'].forEach(x=>document.getElementById('vista_'+x).style.display=(x===v?'block':'none'));
     document.querySelectorAll('.nav button').forEach(b=>{b.className='';const d=b.querySelector('.dot');if(d)d.remove();});
     btn.className='on'; const dot=document.createElement('span'); dot.className='dot'; btn.prepend(dot);
-    if(v==='mas')pintarMas();
   }
 
   function pintarInicio(){
@@ -313,7 +325,32 @@
         '<div class="rg bad"><div class="n num">'+r[3]+'</div><div class="l">+30 DÍAS</div></div>'+
       '</div>'+
       '<div class="sec-h"><span class="t">Mora por ejecutivo</span><span class="ln"></span></div>'+
-      (ejs.map(([e,v])=>'<div class="ej"><div class="nm"><div class="av">'+ini2(e)+'</div>'+e+'</div><div class="vv num">'+f(v)+'</div></div>').join('')||'<div class="loader">Sin mora</div>');
+      (ejs.map(([e,v])=>'<div class="ej"><div class="nm"><div class="av">'+ini2(e)+'</div>'+e+'</div><div class="vv num">'+f(v)+'</div></div>').join('')||'<div class="loader">Sin mora</div>')+
+      moduloHTML();
+  }
+
+  // Módulos (antes en "Más", ahora en el inicio) — agrupados y por rol
+  const ICON_BADGE={autorizaciones:1,solicitudes_reno:1,solicitudes_multa:1,visitas:1};
+  function moduloHTML(){
+    const G={
+      'Cobranza':[['comentarios_cobranza','Comentarios','Notas de cobranza']],
+      'Operación':[['visitas','Visitas','Verificaciones'],['juridico','Jurídico','Casos legales'],['solicitudes_reno','Renos','Solicitudes'],['solicitudes_multa','Multas','Solicitudes']],
+      'Finanzas':[['finanzas','Finanzas','Ingresos y gastos'],['movimientos','Movimientos','Bancos'],['acreedores','Acreedores','Inversionistas']],
+      'Administración':[['autorizaciones','Autorizaciones','Aprobaciones'],['equipo','Equipo','Usuarios y roles']]
+    };
+    const esEjec=ROL==='EJECUTIVO';
+    let html='';
+    Object.keys(G).forEach(grupo=>{
+      if(esEjec && (grupo==='Finanzas'||grupo==='Administración')) return;
+      html+='<div class="sec-h"><span class="t">'+grupo+'</span><span class="ln"></span></div><div class="menugrid">';
+      html+=G[grupo].map(s=>{
+        const n=PENDCOUNT[s[0]]||0;
+        const badge=n>0?'<span class="badge-n">'+n+'</span>':'';
+        return '<button class="menubtn" onclick="abrirSeccion(\''+s[0]+'\')">'+badge+'<div class="mi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+(ICON[s[0]]||'')+'</svg></div><div class="ml">'+s[1]+'</div><div class="md">'+s[2]+'</div></button>';
+      }).join('');
+      html+='</div>';
+    });
+    return html;
   }
 
   function pintarCartera(){
@@ -380,25 +417,6 @@
     autorizaciones:'<path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/>',
     comentarios_cobranza:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
   };
-  function pintarMas(){
-    const G={
-      'Cobranza':[['comentarios_cobranza','Comentarios','Notas de cobranza']],
-      'Operación':[['visitas','Visitas','Verificaciones'],['juridico','Jurídico','Casos legales'],['solicitudes_reno','Renos','Solicitudes'],['solicitudes_multa','Multas','Solicitudes']],
-      'Finanzas':[['finanzas','Finanzas','Ingresos y gastos'],['movimientos','Movimientos','Bancos'],['acreedores','Acreedores','Inversionistas']],
-      'Administración':[['autorizaciones','Autorizaciones','Aprobaciones'],['equipo','Equipo','Usuarios y roles']]
-    };
-    const esEjec = ROL==='EJECUTIVO';
-    let html='';
-    Object.keys(G).forEach(grupo=>{
-      // Ejecutivo no ve Finanzas ni Administración
-      if(esEjec && (grupo==='Finanzas'||grupo==='Administración')) return;
-      html+='<div class="sec-h"><span class="t">'+grupo+'</span><span class="ln"></span></div><div class="menugrid">';
-      html+=G[grupo].map(s=>'<button class="menubtn" onclick="abrirSeccion(\''+s[0]+'\')"><div class="mi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+(ICON[s[0]]||'')+'</svg></div><div class="ml">'+s[1]+'</div><div class="md">'+s[2]+'</div></button>').join('');
-      html+='</div>';
-    });
-    document.getElementById('vista_mas').innerHTML=html;
-  }
-
   const DEF={
     juridico:{tabla:'cartera_juridico',titulo:'Jurídico',orden:'saldo_mc',busca:'cliente',map:r=>({t:r.cliente,s:(r.ejecutivo||'—')+' · '+(r.estatus||''),a:f(r.saldo_mc),b:r.estatus||'',bc:'y'})},
     visitas:{tabla:'visitas',titulo:'Visitas',orden:'fecha',desc:true,busca:'cliente',map:r=>({t:r.cliente||r.direccion||'—',s:(r.tipo||'')+' · '+(r.fecha||''),a:'',b:r.estatus||'',bc:'b'})},
