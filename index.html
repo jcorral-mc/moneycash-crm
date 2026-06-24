@@ -189,7 +189,7 @@
   const SUPABASE_URL='https://qlobqnzgdojghypbdeks.supabase.co';
   const SUPABASE_KEY='sb_publishable_YIFdSES9rZJuc8Z70X5riA_Oe9pdXlP';
   const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-  let CARTERA=[], MORA=[], CALByCli={}, COBRADO_MES=0, CACHE={};
+  let CARTERA=[], MORA=[], CALByCli={}, COBRADO_MES=0, CACHE={}, FICHA_CLIENTE='';
   const GRACIA=3;
   const f=n=>'$'+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0});
   const norm=s=>(s||'').toString().trim().toUpperCase();
@@ -223,7 +223,7 @@
     const r1=await db.from('cartera').select('*').order('saldo',{ascending:false}); CARTERA=r1.data||[];
     // todo el calendario una vez
     let cal=[], desde=0, pag=1000;
-    for(let i=0;i<5;i++){ const r=await db.from('calendarios').select('cliente,n_pago,fecha,monto_puntual,monto_impuntual,pagado,estatus,capital,interes').range(desde,desde+pag-1); const d=r.data||[]; cal=cal.concat(d); if(d.length<pag)break; desde+=pag; }
+    for(let i=0;i<5;i++){ const r=await db.from('calendarios').select('id,cliente,n_pago,fecha,monto_puntual,monto_impuntual,pagado,estatus,capital,interes').range(desde,desde+pag-1); const d=r.data||[]; cal=cal.concat(d); if(d.length<pag)break; desde+=pag; }
     CALByCli={}; cal.forEach(p=>{ const k=norm(p.cliente); (CALByCli[k]=CALByCli[k]||[]).push(p); });
     const hoy=new Date(); hoy.setHours(0,0,0,0); const hoyMs=hoy.getTime();
     const lim=new Date(hoyMs-GRACIA*86400000).getTime();
@@ -386,6 +386,7 @@
   }
 
   async function abrirFicha(nombre){
+    FICHA_CLIENTE=nombre;
     document.getElementById('ficha').style.display='block';
     document.getElementById('fnom').textContent=nombre;
     document.getElementById('fbody').innerHTML='<div class="loader">Cargando…</div>';
@@ -400,6 +401,7 @@
       '<div class="ftrip"><div class="c"><div class="l">SALDO</div><div class="v num" style="color:var(--navy)">'+f(c.saldo)+'</div></div>'+
       '<div class="c"><div class="l">CAPITAL</div><div class="v num">'+f(c.capital)+'</div></div>'+
       '<div class="c"><div class="l">VENCE</div><div class="v" style="font-size:.85em">'+(c.vencimiento||'—')+'</div></div></div></div>'+
+      '<button onclick="registrarAbono()" style="width:100%;padding:12px;background:var(--green);color:#fff;border:none;border-radius:11px;font-weight:600;font-family:inherit;font-size:.9em;cursor:pointer;margin-bottom:11px">＋  Registrar abono</button>'+
       '<div class="cnt3"><div class="cnt"><div class="n num" style="color:var(--green)">'+pagados+'</div><div class="l">PAGADOS</div></div>'+
       '<div class="cnt"><div class="n num" style="color:var(--slate)">'+pend+'</div><div class="l">PENDIENTES</div></div>'+
       '<div class="cnt"><div class="n num" style="color:var(--red)">'+venc+'</div><div class="l">VENCIDOS</div></div></div>'+
@@ -410,10 +412,69 @@
         return '<div class="pago"><div class="izq"><span class="np">#'+(p.n_pago||'')+'</span><span>'+(p.fecha||'')+'</span></div><div style="display:flex;align-items:center;gap:8px"><span class="num" style="font-weight:600">'+f(monto)+'</span>'+chip+'</div></div>';
       }).join('')||'<div class="loader">Sin calendario</div>')+'</div>'+
       '<div class="sec-h"><span class="t">Comentarios de cobranza</span><span class="ln"></span></div>'+
+      '<div class="fcard" style="padding:12px"><textarea id="nuevoComent" placeholder="Escribe un comentario…" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 10px;font-family:inherit;font-size:.86em;min-height:54px;resize:vertical;color:var(--ink2)"></textarea>'+
+      '<div style="display:flex;gap:8px;margin-top:8px"><select id="comentEstado" class="f" style="margin:0;flex:1"><option>SEGUIMIENTO</option><option>PROMESA DE PAGO</option><option>SIN CONTACTO</option><option>NEGOCIACIÓN</option><option>NO QUIERE PAGAR</option><option>OTRO</option></select>'+
+      '<button id="btnComent" onclick="guardarComentario()" style="background:var(--navy);color:#fff;border:none;border-radius:9px;padding:0 18px;font-weight:600;font-family:inherit;font-size:.86em;cursor:pointer">Guardar</button></div></div>'+
       (coments.map(cm=>'<div class="coment"><div class="ch"><span>'+(cm.autor||'—')+(cm.estado?(' · '+cm.estado):'')+'</span><span>'+(cm.fecha||'')+'</span></div><div class="ct">'+(cm.comentario||'')+'</div></div>').join('')||'<div class="loader">Sin comentarios</div>');
     document.getElementById('fbody').innerHTML=h;
   }
   function cerrar(id){ document.getElementById(id).style.display='none'; }
+
+  // ── ESCRIBIR: comentario de cobranza ──
+  async function guardarComentario(){
+    const txt=(document.getElementById('nuevoComent').value||'').trim();
+    const est=document.getElementById('comentEstado').value;
+    const btn=document.getElementById('btnComent');
+    if(!txt){ return; }
+    btn.textContent='Guardando…'; btn.disabled=true;
+    const {data:{session}}=await db.auth.getSession();
+    const autor=(session&&session.user&&session.user.email)?session.user.email.split('@')[0]:'usuario';
+    const hoy=new Date().toISOString().slice(0,10);
+    const {error}=await db.from('comentarios_cobranza').insert({cliente:FICHA_CLIENTE,autor:autor,fecha:hoy,estado:est,comentario:txt});
+    if(error){ btn.textContent='Guardar'; btn.disabled=false; alert('No se pudo guardar: '+error.message); return; }
+    abrirFicha(FICHA_CLIENTE); // refresca la ficha con el nuevo comentario
+  }
+
+  // ── ESCRIBIR: registrar abono (versión de prueba) ──
+  async function registrarAbono(){
+    const c=CARTERA.find(x=>norm(x.nombre)===norm(FICHA_CLIENTE)); if(!c){ alert('Cliente no encontrado.'); return; }
+    const txt=prompt('Monto del abono para '+FICHA_CLIENTE+':');
+    if(txt===null) return;
+    let monto=parseFloat(String(txt).replace(/[^0-9.]/g,''));
+    if(!monto||monto<=0){ alert('Monto inválido.'); return; }
+    if(!confirm('¿Registrar abono de '+f(monto)+' a '+FICHA_CLIENTE+'?\\n\\n(Esto baja su saldo y marca pagos en el calendario.)')) return;
+
+    // 1) aplicar a los pagos pendientes más viejos
+    const cal=(CALByCli[norm(FICHA_CLIENTE)]||[]).slice().sort((a,b)=>(a.n_pago||0)-(b.n_pago||0));
+    let resto=monto; const updates=[];
+    for(const p of cal){
+      if(resto<=0) break;
+      if(norm(p.estatus).indexOf('PAGADO')>=0) continue;
+      const necesita=Math.max((Number(p.monto_puntual)||0)-(Number(p.pagado)||0),0);
+      if(necesita<=0) continue;
+      const aplica=Math.min(resto, necesita);
+      const nuevoPagado=(Number(p.pagado)||0)+aplica;
+      const nuevoEstatus = nuevoPagado>=(Number(p.monto_puntual)||0) ? 'PAGADO' : (p.estatus||'PENDIENTE');
+      updates.push({id:p.id, pagado:nuevoPagado, estatus:nuevoEstatus});
+      resto-=aplica;
+    }
+    // 2) guardar cambios en calendario
+    for(const u of updates){
+      const {error}=await db.from('calendarios').update({pagado:u.pagado, estatus:u.estatus}).eq('id',u.id);
+      if(error){ alert('Error al marcar pago: '+error.message); return; }
+    }
+    // 3) bajar saldo del cliente
+    const nuevoSaldo=Math.max((Number(c.saldo)||0)-monto, 0);
+    const {error:e2}=await db.from('cartera').update({saldo:nuevoSaldo}).eq('id',c.id);
+    if(e2){ alert('Error al actualizar saldo: '+e2.message); return; }
+    // 4) registrar en desglose (reparto simple 60/40 capital/interés)
+    const hoy=new Date().toISOString().slice(0,10);
+    await db.from('desglose').insert({fecha:hoy,cliente:FICHA_CLIENTE,ejecutivo:c.ejecutivo||'',pago:monto,capital:Math.round(monto*0.6),interes:Math.round(monto*0.4),tipo:'ABONO',banco:''});
+
+    alert('✅ Abono de '+f(monto)+' registrado.');
+    await cargarTodo();          // recalcula todo (saldos, mora, cobrado)
+    abrirFicha(FICHA_CLIENTE);    // reabre la ficha actualizada
+  }
 
   init();
 </script>
