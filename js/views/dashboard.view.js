@@ -14,6 +14,10 @@ import { abrirJuridico } from './juridico.view.js';
 import { abrirEquipo } from './equipo.view.js';
 import { abrirAutorizaciones } from './autorizaciones.view.js';
 import { abrirFinanzas } from './finanzas.view.js';
+import { abrirCuentas } from './cuentas.view.js';
+import { abrirCompensaciones } from './compensaciones.view.js';
+import { abrirReactivaciones } from './reactivaciones.view.js';
+import { abrirDesglose } from './desglose.view.js';
 import { contarPendientes as contarAutorizaciones } from '../repositories/autorizaciones.repo.js';
 
 export async function renderDashboard(perfil) {
@@ -55,6 +59,9 @@ export async function renderDashboard(perfil) {
       { k:'cartera',  t:'Cartera',       s:'Clientes y fichas',            show:true },
       { k:'cobranza', t:'Cobranza',      s:'Prioridad y mora',             show:true },
       { k:'conc',     t:'Conciliación',  s:'Pagos por revisar y aplicar',  show:puedeConciliar, badge:pendConc },
+      { k:'micomision', t:'Mi comisión', s:'Tu cumplimiento y comisión del mes', show:esEjecutivo },
+      { k:'reactiv', t:'Reactivaciones', s:'Clientes liquidados para nuevo crédito', show:true },
+      { k:'desglose', t:'Desglose de cobros', s:'Consulta y exporta cobros del mes', show:true },
     ]},
     { titulo:'Operación', items:[
       { k:'visitas', t:'Visitas', s:'Verificación, cobranza, jurídico, mensajería', show:veVisitas },
@@ -65,9 +72,11 @@ export async function renderDashboard(perfil) {
       { k:'bancos', t:'Bancos',      s:'Saldos, movimientos, transferencias', show:finanzas },
       { k:'movs',   t:'Movimientos', s:'Gastos, nómina, intereses, diligencias', show:adminAux },
       { k:'acre',   t:'Acreedores',  s:'Inversionistas y lo que se les debe', show:finanzas },
+      { k:'cuentas', t:'Cuentas (CxP/CxC)', s:'Por pagar (proveedores) y por cobrar', show:finanzas },
     ]},
     { titulo:'Administración', items:[
       { k:'equipo', t:'Equipo', s:'Usuarios, roles y ejecutivos', show:rol==='ADMIN' },
+      { k:'compen', t:'Compensaciones', s:'Comisiones de ejecutivos por meta', show:['ADMIN','GERENTE'].includes(rol) },
       { k:'autoriz', t:'Autorizaciones', s:'Multas, descuentos y movimientos por aprobar', show:veSolicitudes, badge:nSol },
       { k:'export',  t:'Exportar / Respaldo', s:'Descargar tablas en CSV', show:adminAux },
     ]},
@@ -95,11 +104,16 @@ export async function renderDashboard(perfil) {
   on('visitas',  () => abrirVisitas(perfil));
   on('juridico', () => abrirJuridico(perfil));
   on('cobranza', () => abrirCobranza(perfil));
+  on('micomision', () => abrirCompensaciones(perfil));
+  on('compen',   () => abrirCompensaciones(perfil));
+  on('reactiv',  () => abrirReactivaciones(perfil));
+  on('desglose', () => abrirDesglose(perfil));
   on('conc',     () => abrirConciliacion(perfil, () => reload(perfil)));
   on('bancos',   () => abrirBancos(perfil));
   on('movs',     () => abrirMovimientos(perfil));
   on('acre',     () => abrirAcreedores(perfil));
   on('finanzas', () => abrirFinanzas(perfil));
+  on('cuentas',  () => abrirCuentas(perfil));
   on('export',   () => abrirExport(perfil));
   on('equipo',   () => abrirEquipo(perfil));
   on('autoriz',  () => abrirAutorizaciones(perfil, () => reload(perfil)));
