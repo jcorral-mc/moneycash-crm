@@ -213,6 +213,7 @@
   const SUPABASE_KEY='sb_publishable_YIFdSES9rZJuc8Z70X5riA_Oe9pdXlP';
   const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
   let CARTERA=[], MORA=[], CALByCli={}, COBRADO_MES=0, CACHE={}, FICHA_CLIENTE='';
+  let ROL='ADMIN', EJECUTIVO='', NOMBRE='';
   const GRACIA=3;
   const f=n=>'$'+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0});
   const norm=s=>(s||'').toString().trim().toUpperCase();
@@ -223,9 +224,16 @@
   function mostrarLogin(){ document.getElementById('login').style.display='flex'; document.getElementById('app').style.display='none'; }
   async function mostrarApp(s){
     document.getElementById('login').style.display='none'; document.getElementById('app').style.display='block';
+    // Cargar perfil (rol) del usuario
+    try{
+      const rp=await db.from('perfiles').select('*').eq('email',s.user.email).maybeSingle();
+      if(rp.data){ ROL=(rp.data.rol||'EJECUTIVO').toUpperCase(); EJECUTIVO=rp.data.ejecutivo||''; NOMBRE=rp.data.nombre||s.user.email.split('@')[0]; }
+      else { ROL='ADMIN'; EJECUTIVO=''; NOMBRE=s.user.email.split('@')[0]; } // sin perfil = admin (Jorge)
+    }catch(e){ ROL='ADMIN'; NOMBRE=s.user.email.split('@')[0]; }
     const h=new Date().getHours(); const sal=h<12?'Buenos días':h<19?'Buenas tardes':'Buenas noches';
-    document.getElementById('saludo').textContent=sal;
-    document.getElementById('quien').textContent=(s.user.email||'')+' · Panel general';
+    document.getElementById('saludo').textContent=sal+', '+NOMBRE;
+    const rolTxt={ADMIN:'Administrador',GERENTE:'Gerente',EJECUTIVO:'Ejecutivo'+(EJECUTIVO?' · '+EJECUTIVO:''),JURIDICO:'Jurídico',AUX_ADMIN:'Auxiliar'}[ROL]||ROL;
+    document.getElementById('quien').textContent=rolTxt;
     await cargarTodo();
   }
   async function entrar(){
@@ -244,6 +252,8 @@
     document.getElementById('vista_inicio').innerHTML='<div class="loader">Cargando…</div>';
     CACHE={};
     const r1=await db.from('cartera').select('*').order('saldo',{ascending:false}); CARTERA=r1.data||[];
+    // Si es EJECUTIVO, solo ve su cartera
+    if(ROL==='EJECUTIVO' && EJECUTIVO){ CARTERA=CARTERA.filter(c=>norm(c.ejecutivo)===norm(EJECUTIVO)); }
     // todo el calendario una vez
     let cal=[], desde=0, pag=1000;
     for(let i=0;i<5;i++){ const r=await db.from('calendarios').select('id,cliente,n_pago,fecha,monto_puntual,monto_impuntual,pagado,estatus,capital,interes').range(desde,desde+pag-1); const d=r.data||[]; cal=cal.concat(d); if(d.length<pag)break; desde+=pag; }
@@ -264,6 +274,7 @@
       });
     });
     MORA=Object.values(acc).filter(m=>m.mora>0).sort((a,b)=>b.mora-a.mora);
+    if(ROL==='EJECUTIVO' && EJECUTIVO){ MORA=MORA.filter(m=>norm(m.ejecutivo)===norm(EJECUTIVO)); }
     const im=new Date(hoy.getFullYear(),hoy.getMonth(),1).toISOString().slice(0,10);
     const r3=await db.from('desglose').select('pago,fecha').gte('fecha',im);
     COBRADO_MES=(r3.data||[]).reduce((s,d)=>s+Number(d.pago||0),0);
@@ -358,6 +369,7 @@
   }
 
   const ICON={
+    equipo:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="3"/><path d="M22 21v-2a4 4 0 0 0-3-3.8"/><path d="M16 3.1a4 4 0 0 1 0 7.7"/>',
     finanzas:'<path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/>',
     juridico:'<path d="M12 3v18M5 7l7-4 7 4M5 7l-2 6a4 4 0 0 0 8 0L9 7M19 7l-2 6a4 4 0 0 0 8 0l-2-6"/>',
     visitas:'<path d="M12 21s-7-5.5-7-11a7 7 0 0 1 14 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
@@ -369,9 +381,22 @@
     comentarios_cobranza:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'
   };
   function pintarMas(){
-    const secs=[['finanzas','Finanzas','Ingresos y gastos'],['juridico','Jurídico','Casos legales'],['visitas','Visitas','Verificaciones'],['movimientos','Movimientos','Bancos'],['acreedores','Acreedores','Inversionistas'],['solicitudes_reno','Renos','Solicitudes'],['solicitudes_multa','Multas','Solicitudes'],['autorizaciones','Autorizaciones','Aprobaciones'],['comentarios_cobranza','Comentarios','Notas cobranza']];
-    document.getElementById('vista_mas').innerHTML='<div class="menugrid">'+secs.map(s=>
-      '<button class="menubtn" onclick="abrirSeccion(\''+s[0]+'\')"><div class="mi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+(ICON[s[0]]||'')+'</svg></div><div class="ml">'+s[1]+'</div><div class="md">'+s[2]+'</div></button>').join('')+'</div>';
+    const G={
+      'Cobranza':[['comentarios_cobranza','Comentarios','Notas de cobranza']],
+      'Operación':[['visitas','Visitas','Verificaciones'],['juridico','Jurídico','Casos legales'],['solicitudes_reno','Renos','Solicitudes'],['solicitudes_multa','Multas','Solicitudes']],
+      'Finanzas':[['finanzas','Finanzas','Ingresos y gastos'],['movimientos','Movimientos','Bancos'],['acreedores','Acreedores','Inversionistas']],
+      'Administración':[['autorizaciones','Autorizaciones','Aprobaciones'],['equipo','Equipo','Usuarios y roles']]
+    };
+    const esEjec = ROL==='EJECUTIVO';
+    let html='';
+    Object.keys(G).forEach(grupo=>{
+      // Ejecutivo no ve Finanzas ni Administración
+      if(esEjec && (grupo==='Finanzas'||grupo==='Administración')) return;
+      html+='<div class="sec-h"><span class="t">'+grupo+'</span><span class="ln"></span></div><div class="menugrid">';
+      html+=G[grupo].map(s=>'<button class="menubtn" onclick="abrirSeccion(\''+s[0]+'\')"><div class="mi"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+(ICON[s[0]]||'')+'</svg></div><div class="ml">'+s[1]+'</div><div class="md">'+s[2]+'</div></button>').join('');
+      html+='</div>';
+    });
+    document.getElementById('vista_mas').innerHTML=html;
   }
 
   const DEF={
@@ -431,6 +456,7 @@
   }
   async function abrirSeccion(tipo){
     if(tipo==='finanzas'){ return abrirFinanzas(); }
+    if(tipo==='equipo'){ return abrirEquipo(); }
     const d=DEF[tipo]; if(!d)return;
     document.getElementById('seccion').style.display='block';
     document.getElementById('snom').textContent=d.titulo;
@@ -630,6 +656,35 @@
     const csv=filas.map(r=>r.map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(',')).join('\\n');
     const blob=new Blob(["\\uFEFF"+csv],{type:'text/csv;charset=utf-8'});
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='moneycash_'+nombre+'.csv'; a.click();
+  }
+
+  // ── Equipo / roles (admin) ──
+  async function abrirEquipo(){
+    document.getElementById('seccion').style.display='block';
+    document.getElementById('snom').textContent='Equipo';
+    document.getElementById('sbody').innerHTML='<div class="loader">Cargando…</div>';
+    const r=await db.from('perfiles').select('*').order('rol');
+    const perf=r.data||[];
+    const ejs=[...new Set(CARTERA.map(c=>c.ejecutivo).filter(Boolean))].sort();
+    document.getElementById('sbody').innerHTML=
+      '<div class="coment" style="margin-bottom:12px"><div class="ct" style="font-size:.8em;color:var(--slate)">Para dar acceso a alguien: primero créale su usuario en Supabase (Authentication → Add user), y aquí registra su correo con su rol. El ejecutivo solo verá su cartera.</div></div>'+
+      '<div class="fcard"><div class="alab">Correo del usuario</div><input id="p_email" class="f">'+
+      '<div class="alab">Nombre</div><input id="p_nombre" class="f">'+
+      '<div class="alab">Rol</div><select id="p_rol" class="f" onchange="document.getElementById(\'wrapEj\').style.display=this.value===\'EJECUTIVO\'?\'block\':\'none\'"><option>EJECUTIVO</option><option>ADMIN</option><option>GERENTE</option><option>JURIDICO</option><option>AUX_ADMIN</option></select>'+
+      '<div id="wrapEj"><div class="alab">Ejecutivo (su cartera)</div><select id="p_ejec" class="f"><option value="">—</option>'+ejs.map(e=>'<option>'+e+'</option>').join('')+'</select></div>'+
+      '<button onclick="guardarPerfil()" id="btnPerfil" style="width:100%;padding:12px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-weight:600;font-family:inherit;margin-top:12px;cursor:pointer">Guardar acceso</button></div>'+
+      '<div class="sec-h"><span class="t">Usuarios registrados</span><span class="ln"></span></div>'+
+      (perf.map(p=>'<div class="ej"><div class="nm"><div class="av">'+ini2(p.nombre||p.email)+'</div><div><div style="font-weight:600">'+(p.nombre||p.email)+'</div><div style="font-size:.78em;color:var(--slate)">'+p.email+'</div></div></div><span class="pill b">'+(p.rol||'')+(p.ejecutivo?(' · '+p.ejecutivo):'')+'</span></div>').join('')||'<div class="loader">Aún no hay usuarios registrados</div>');
+  }
+  async function guardarPerfil(){
+    const email=(document.getElementById('p_email').value||'').trim().toLowerCase();
+    if(!email){ alert('Pon el correo.'); return; }
+    const reg={email, nombre:(document.getElementById('p_nombre').value||'').trim(), rol:document.getElementById('p_rol').value, ejecutivo:document.getElementById('p_rol').value==='EJECUTIVO'?document.getElementById('p_ejec').value:''};
+    const btn=document.getElementById('btnPerfil'); btn.textContent='Guardando…'; btn.disabled=true;
+    const {error}=await db.from('perfiles').upsert(reg,{onConflict:'email'});
+    btn.textContent='Guardar acceso'; btn.disabled=false;
+    if(error){ alert('Error: '+error.message); return; }
+    alert('✅ Acceso guardado.'); abrirEquipo();
   }
 
   init();
