@@ -11,6 +11,10 @@ import { abrirClientes } from './clientes.view.js';
 import { abrirCobranza } from './cobranza.view.js';
 import { abrirVisitas } from './visitas.view.js';
 import { abrirJuridico } from './juridico.view.js';
+import { abrirEquipo } from './equipo.view.js';
+import { abrirAutorizaciones } from './autorizaciones.view.js';
+import { abrirFinanzas } from './finanzas.view.js';
+import { contarPendientes as contarAutorizaciones } from '../repositories/autorizaciones.repo.js';
 
 export async function renderDashboard(perfil) {
   const root = el('<div class="view"><div class="loader">Cargando indicadores…</div></div>');
@@ -28,7 +32,7 @@ export async function renderDashboard(perfil) {
 
   let pendConc = 0, nSol = 0;
   if (puedeConciliar) pendConc = await contarPendientesConciliar();
-  if (veSolicitudes) nSol = await contarSolicitudes();
+  if (veSolicitudes) nSol = await contarAutorizaciones();
 
   // KPIs (para ejecutivo, construirResumen ya filtra a su cartera)
   const kpisHtml = `
@@ -57,12 +61,14 @@ export async function renderDashboard(perfil) {
       { k:'juridico', t:'Jurídico', s:'Casos, convenios, abonos y diligencias', show:veJuridico },
     ]},
     { titulo:'Finanzas', items:[
+      { k:'finanzas', t:'Finanzas / Balance', s:'Estado de resultados (P&L) del mes', show:['ADMIN','GERENTE'].includes(rol) },
       { k:'bancos', t:'Bancos',      s:'Saldos, movimientos, transferencias', show:finanzas },
       { k:'movs',   t:'Movimientos', s:'Gastos, nómina, intereses, diligencias', show:adminAux },
       { k:'acre',   t:'Acreedores',  s:'Inversionistas y lo que se les debe', show:finanzas },
     ]},
     { titulo:'Administración', items:[
-      { k:'autoriz', t:'Autorizaciones', s:'Solicitudes pendientes (multa/liquidación)', show:veSolicitudes, badge:nSol, estatico:true },
+      { k:'equipo', t:'Equipo', s:'Usuarios, roles y ejecutivos', show:rol==='ADMIN' },
+      { k:'autoriz', t:'Autorizaciones', s:'Multas, descuentos y movimientos por aprobar', show:veSolicitudes, badge:nSol },
       { k:'export',  t:'Exportar / Respaldo', s:'Descargar tablas en CSV', show:adminAux },
     ]},
   ];
@@ -93,7 +99,10 @@ export async function renderDashboard(perfil) {
   on('bancos',   () => abrirBancos(perfil));
   on('movs',     () => abrirMovimientos(perfil));
   on('acre',     () => abrirAcreedores(perfil));
+  on('finanzas', () => abrirFinanzas(perfil));
   on('export',   () => abrirExport(perfil));
+  on('equipo',   () => abrirEquipo(perfil));
+  on('autoriz',  () => abrirAutorizaciones(perfil, () => reload(perfil)));
 
   return root;
 }
