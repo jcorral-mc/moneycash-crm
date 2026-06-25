@@ -25,54 +25,120 @@ export async function renderCobranza(perfil) {
 
   function reload(){ renderCobranza(perfil).then(n => { const v = root.parentNode; if (v) v.replaceChild(n, root); }); }
 
+  // ── Colores y etiquetas estilo Script (paleta banco) ──
+  const COLOR = { 'prox':'var(--steel)', '7':'var(--green)', '15':'var(--amber)', '30':'var(--amber)', '45':'var(--red)', '45+':'var(--red)' };
+  const ETIQ  = { '7':'1-7d', '15':'8-15d', '30':'16-30d', '45':'31-45d', '45+':'45+d' };
+  function colCli(c){ if (c.esPreventivo) return 'var(--steel)'; if (!c.pasoGracia) return 'var(--green)'; if (c.bucket==='45'||c.bucket==='45+') return 'var(--red)'; return 'var(--amber)'; }
+  const dot = col => `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${col};vertical-align:middle"></span>`;
+
+  let EJEC_SEL = null, BUSCA = '', BUCKET = '', ORDEN = 'bucket';
+
+  const revisionHTML = (casos && casos.length) ? `
+    <div class="rev-banner" style="margin-bottom:12px"><b>En revisión con gerencia · ${casos.length}</b>
+      ${casos.map(c => `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid rgba(0,0,0,.08)"><div style="min-width:0"><b>${c.cliente}</b><div style="font-size:.72em;color:var(--slate)">${c.ejecutivo||'(sin ejec.)'} · escaló ${c.escalo||''}</div></div>${['ADMIN','GERENTE'].includes(perfil.rol)?`<button class="btn-mini-resolver" data-rev="${c.id}">Resolver</button>`:''}</div>`).join('')}
+    </div>` : '';
+
   const porCobrarHTML = `
     <div class="sec-h"><span class="t">Por cobrar (cartera)</span><span class="ln"></span></div>
     <div class="fcard">
       <div class="liqrow"><span>Total por cobrar</span><b class="num">${money(cxc.total)}</b></div>
       <div class="liqrow"><span>Vigente</span><b class="num">${money(cxc.vigente)}</b></div>
-      <div class="liqrow"><span>Al corriente</span><b class="num">${money(cxc.buckets['0'])}</b></div>
       <div class="liqrow"><span>1–7 días</span><b class="num">${money(cxc.buckets['1-7'])}</b></div>
       <div class="liqrow"><span>8–15 días</span><b class="num">${money(cxc.buckets['8-15'])}</b></div>
       <div class="liqrow"><span>16–30 días</span><b class="num">${money(cxc.buckets['16-30'])}</b></div>
       <div class="liqrow hl"><span>+30 días</span><b class="num" style="color:var(--red)">${money(cxc.buckets['+30'])}</b></div>
     </div>`;
 
-  const revisionHTML = (casos && casos.length) ? `
-    <div class="sec-h"><span class="t">⚖️ En revisión con gerencia · ${casos.length}</span><span class="ln"></span></div>
-    ${casos.map(c => `
-      <div class="cobcard crit" data-rev="${c.id}">
-        <div style="min-width:0"><div class="nm">${c.cliente}</div><div class="mt">${c.ejecutivo||'(sin ejec.)'} · escaló ${c.escalo||''}</div></div>
-        ${['ADMIN','GERENTE'].includes(perfil.rol) ? `<button class="btn-mini-resolver" data-rev="${c.id}">Resolver</button>` : ''}
-      </div>`).join('')}` : '';
+  const BUCKETS_OPT = [['','Antigüedad: todas'],['prox','Próximos (3 días)'],['7','1-7 días'],['15','8-15 días'],['30','16-30 días'],['45','31-45 días'],['45+','45+ días']];
+  const ORDEN_OPT = [['bucket','Próximos primero'],['monto-desc','Monto ↓'],['monto-asc','Monto ↑'],['dias-desc','Días ↓']];
 
   root.innerHTML = `
-    <div class="kpis kpis3">
-      <div class="kcard"><div class="klab">Vencido total</div><div class="kval num" style="font-size:1.25em;color:var(--red)">${money(kpis.totalVencido)}</div></div>
-      <div class="kcard"><div class="klab">En mora</div><div class="kval num" style="font-size:1.25em">${kpis.totalClientes}</div></div>
-      <div class="kcard"><div class="klab">Crítico +45d</div><div class="kval num" style="font-size:1.25em;color:var(--red)">${money(kpis.critico45)}</div></div>
+    <div id="cob-esc">${revisionHTML}</div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
+      <input class="inp" id="cob-busca" placeholder="Buscar cliente" style="flex:1;min-width:130px;margin:0">
+      <select class="inp" id="cob-bucket" style="width:auto;margin:0">${BUCKETS_OPT.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select>
+      <select class="inp" id="cob-orden" style="width:auto;margin:0">${ORDEN_OPT.map(([v,t])=>`<option value="${v}">${t}</option>`).join('')}</select>
     </div>
-    ${porCobrarHTML}
-    ${revisionHTML}
-    ${ejecutivos.map(e => `
-      <div class="sec-h"><span class="t">${e.ejecutivo} · ${money(e.totalVencido)} · ${e.nClientes}</span><span class="ln"></span></div>
-      ${e.clientes.map(c => {
-        const col = colorBucket(c.bucket);
-        const etiqueta = c.esPreventivo ? `Por vencer · ${c.proxPago}` : `${c.dias} días vencido`;
-        const monto = c.esPreventivo ? c.porVencer : c.vencido;
-        return `<div class="cobcard ${col}" data-n="${enc(c.nombre)}" data-m="${monto}">
-          <div style="min-width:0"><div class="nm">${c.nombre}</div><div class="mt">${etiqueta}</div></div>
-          <div class="sal num" style="color:var(--${col==='blue'?'navy':'red'})">${money(monto)}</div>
-        </div>`;
-      }).join('')}
-    `).join('') || (revisionHTML ? '' : '<div class="note">No hay clientes en cobranza.</div>')}`;
+    <div class="kpis" style="grid-template-columns:1fr 1fr;margin-bottom:14px">
+      <div class="kcard"><div class="klab">Vencido total</div><div class="kval num" style="color:var(--red)">${money(kpis.totalVencido)}</div></div>
+      <div class="kcard"><div class="klab">Clientes vencidos</div><div class="kval num">${kpis.totalClientes}</div></div>
+      <div class="kcard"><div class="klab">Crítico 45+</div><div class="kval num" style="color:var(--red)">${money(kpis.critico45)}</div></div>
+      <div class="kcard"><div class="klab">Ejecutivos</div><div class="kval num">${kpis.nEjecutivos}</div></div>
+    </div>
+    <div id="cob-body"></div>
+    <div style="margin-top:16px">${porCobrarHTML}</div>`;
 
-  root.querySelectorAll('.cobcard[data-n]').forEach(card => card.addEventListener('click', () =>
-    abrirGestion(dec(card.dataset.n), Number(card.dataset.m)||0, perfil, reload)));
-  root.querySelectorAll('.btn-mini-resolver').forEach(b => b.addEventListener('click', (ev) => {
+  const body = root.querySelector('#cob-body');
+
+  function pintar(){
+    if (EJEC_SEL) return pintarDetalle();
+    const q = BUSCA.toLowerCase();
+    let html = '';
+    ejecutivos.forEach(e => {
+      let cls = e.clientes;
+      if (q) cls = cls.filter(c => c.nombre.toLowerCase().includes(q));
+      if (BUCKET) cls = cls.filter(c => c.bucket === BUCKET);
+      if ((q || BUCKET) && !cls.length) return;
+      const esJur = e.ejecutivo.toUpperCase() === 'JURIDICO' && perfil.rol !== 'JURIDICO';
+      const max = Object.values(e.buckets).reduce((a,b)=>a+b,0) || 1;
+      let barra=''; ['7','15','30','45','45+'].forEach(b=>{ const w=e.buckets[b]/max*100; if(w>0) barra+=`<div style="width:${w}%;background:${COLOR[b]}"></div>`; });
+      let chips=''; ['7','15','30','45','45+'].forEach(b=>{ if(e.buckets[b]>0) chips+=`<span style="margin-right:10px;white-space:nowrap">${dot(COLOR[b])} ${ETIQ[b]}: ${e.buckets[b]}</span>`; });
+      html += `<div class="fcard cob-ejec" data-ej="${enc(e.ejecutivo)}" style="cursor:${esJur?'default':'pointer'};margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px">
+          <div style="display:flex;align-items:center;gap:9px"><div style="width:34px;height:34px;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8em;color:var(--navy)">${esJur?'JU':e.ejecutivo.slice(0,2).toUpperCase()}</div>
+            <div><div style="font-weight:800">${e.ejecutivo}</div><div style="font-size:.72em;color:var(--slate)">${e.nClientes} clientes vencidos</div></div></div>
+          <div style="text-align:right"><div class="num" style="font-size:1.1em;font-weight:800">${money(e.totalVencido)}</div><div style="font-size:.68em;color:var(--slate)">vencido</div></div>
+        </div>
+        <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:6px;background:var(--bg)">${barra}</div>
+        <div style="font-size:.72em;color:var(--slate)">${chips}<span style="float:right;color:${esJur?'var(--slate)':'var(--steel)'};font-weight:700">${esJur?'Ver en Jurídico':'Ver clientes ▾'}</span></div>
+      </div>`;
+    });
+    body.innerHTML = html || '<div class="note">No hay clientes en cobranza con ese filtro.</div>';
+    body.querySelectorAll('.cob-ejec').forEach(card => card.addEventListener('click', () => {
+      const ej = dec(card.dataset.ej);
+      if (ej.toUpperCase() === 'JURIDICO' && perfil.rol !== 'JURIDICO') return;
+      EJEC_SEL = ej; pintar();
+    }));
+  }
+
+  function pintarDetalle(){
+    const e = ejecutivos.find(x => x.ejecutivo === EJEC_SEL);
+    if (!e) { EJEC_SEL = null; return pintar(); }
+    const q = BUSCA.toLowerCase();
+    let cls = e.clientes.slice();
+    if (q) cls = cls.filter(c => c.nombre.toLowerCase().includes(q));
+    if (BUCKET) cls = cls.filter(c => c.bucket === BUCKET);
+    if (ORDEN === 'monto-asc') cls.sort((a,b)=>a.vencido-b.vencido);
+    else if (ORDEN === 'monto-desc') cls.sort((a,b)=>b.vencido-a.vencido);
+    else if (ORDEN === 'dias-desc') cls.sort((a,b)=>b.dias-a.dias);
+    else cls.sort((a,b)=>{ const da=a.esPreventivo?a.dias-100:a.dias, db=b.esPreventivo?b.dias-100:b.dias; return da-db; });
+    let html = `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><button id="cob-volver" style="background:var(--bg);border:none;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer;color:var(--navy)">← Ejecutivos</button><div style="font-weight:800">${e.ejecutivo}</div><div class="num" style="margin-left:auto;font-weight:800;color:var(--red)">${money(e.totalVencido)}</div></div>`;
+    html += cls.map(c => {
+      const col = colCli(c);
+      const etiqueta = c.esPreventivo ? `Vence en ${Math.abs(c.dias)}d${c.proxPago?(' · '+c.proxPago):''}` : `${c.dias} días de atraso`;
+      const monto = c.esPreventivo ? (c.porVencer||0) : c.vencido;
+      return `<div class="fcard cob-cli" data-n="${enc(c.nombre)}" data-m="${monto}" style="border-left:4px solid ${col};cursor:pointer;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="min-width:0"><div style="font-weight:800">${c.nombre}</div><div style="font-size:.72em;color:var(--slate)">${etiqueta} · comentarios</div></div>
+          <div class="num" style="font-weight:800;color:${col}">${money(monto)}</div>
+        </div></div>`;
+    }).join('') || '<div class="note">Sin clientes con ese filtro.</div>';
+    body.innerHTML = html;
+    body.querySelector('#cob-volver').addEventListener('click', () => { EJEC_SEL = null; pintar(); });
+    body.querySelectorAll('.cob-cli').forEach(card => card.addEventListener('click', () =>
+      abrirGestion(dec(card.dataset.n), Number(card.dataset.m)||0, perfil, reload)));
+  }
+
+  root.querySelector('#cob-busca').addEventListener('input', ev => { BUSCA = ev.target.value.trim(); pintar(); });
+  root.querySelector('#cob-bucket').addEventListener('change', ev => { BUCKET = ev.target.value; pintar(); });
+  root.querySelector('#cob-orden').addEventListener('change', ev => { ORDEN = ev.target.value; pintar(); });
+  root.querySelectorAll('.btn-mini-resolver').forEach(b => b.addEventListener('click', ev => {
     ev.stopPropagation();
     const caso = casos.find(c => String(c.id) === b.dataset.rev);
     if (caso) abrirResolver(caso, perfil, reload);
   }));
+
+  pintar();
   return root;
 }
 
