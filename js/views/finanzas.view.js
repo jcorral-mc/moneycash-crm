@@ -54,8 +54,7 @@ export async function abrirFinanzas(perfil) {
 
       <div class="sec-h"><span class="t">Informativo</span><span class="ln"></span></div>
       <div class="fcard">
-        ${row('Capital recuperado (devuelto a inversionistas)', b.capitalRecuperado)}
-        <div class="note" style="margin-top:8px">El capital cobrado no es ingreso: regresa a los inversionistas. La ganancia sale solo de intereses, multas y comisiones.</div>
+        <div class="note">El capital cobrado no es ingreso: regresa a los inversionistas. La ganancia sale solo de intereses, multas y comisiones.</div>
       </div>`;
     c.querySelector('#f-mes').addEventListener('change', e=>{ mes=parseInt(e.target.value); pinta(); });
     c.querySelector('#f-anio').addEventListener('change', e=>{ anio=parseInt(e.target.value); pinta(); });

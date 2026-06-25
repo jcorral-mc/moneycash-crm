@@ -47,7 +47,7 @@ export async function abrirMovimientos(perfil) {
       <div class="fcard" style="margin-bottom:14px">
         <div style="font-weight:600;font-size:.9em;margin-bottom:10px">Registrar movimiento</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div><label class="alab">Banco</label><select class="inp" id="mv-banco">${BANCOS.map(b=>`<option>${b.cuenta}</option>`).join('')}</select></div>
+          <div><label class="alab">Banco</label><select class="inp" id="mv-banco">${BANCOS.map(b=>`<option value="${b.cuenta}">${b.cuenta} · ${money(b.saldo_sistema||0)}</option>`).join('')}</select></div>
           <div><label class="alab">Fecha</label><input class="inp" type="date" id="mv-fecha"></div>
         </div>
         <label class="alab">Tipo</label>
@@ -81,7 +81,7 @@ export async function abrirMovimientos(perfil) {
         <div style="font-size:.84em;font-weight:600;color:var(--ink2);margin-bottom:4px">Reversar un movimiento</div>
         <div class="note" style="margin-bottom:8px">Elige el banco, selecciona el movimiento y manda la solicitud. El admin la autoriza y se restituye al banco.</div>
         <div style="display:flex;gap:6px;margin-bottom:8px">
-          <select class="inp" id="rv-banco" style="flex:1;margin:0">${BANCOS.map(b=>`<option>${b.cuenta}</option>`).join('')}</select>
+          <select class="inp" id="rv-banco" style="flex:1;margin:0">${BANCOS.map(b=>`<option value="${b.cuenta}">${b.cuenta} · ${money(b.saldo_sistema||0)}</option>`).join('')}</select>
           <button class="btn-primary" id="rv-buscar" style="flex:0 0 auto;width:auto;padding:0 16px">Buscar</button>
         </div>
         <div id="rv-lista"></div>

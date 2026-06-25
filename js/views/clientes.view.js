@@ -60,11 +60,9 @@ export async function renderClientes(perfil) {
           <div style="text-align:right"><div class="sal num ${c.estado==='VENCIDO'?'r':''}">${money(c.saldo)}</div>
             <div style="margin-top:4px"><span class="pill ${c.estado==='VENCIDO'?'mora':'ok'}">${c.estado==='VENCIDO'?'VENCIDO':'AL DÍA'}</span></div></div>
         </div>
-        <button class="btn-primary cl-pagar" data-n="${n}" style="width:100%;margin-top:9px;background:var(--gold);color:var(--navy)">Pagar${amer?' (Americano)':''}</button>
       </div>`;
     }).join('') || '<div class="loader">Sin resultados</div>';
     list.querySelectorAll('.cli-row').forEach(r => r.addEventListener('click', () => abrirFicha(decodeURIComponent(r.dataset.n), perfil)));
-    list.querySelectorAll('.cl-pagar').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); abrirAplicarPago(decodeURIComponent(b.dataset.n), perfil, () => {}); }));
   }
   [q].forEach(e=>e.addEventListener('input', pinta));
   [ej,tipo,est,ord].forEach(e=>e.addEventListener('change', pinta));

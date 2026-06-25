@@ -177,7 +177,7 @@ export async function abrirBancos(perfil) {
 
   // ───────────── Modales ─────────────
   function modalTransfer() {
-    const ops = R.cuentas.map(c=>`<option>${c.cuenta}</option>`).join('');
+    const ops = R.cuentas.map(c=>`<option value="${c.cuenta}">${c.cuenta} · ${money(c.saldo)}</option>`).join('');
     const m = el(`<div class="p-modal"><div class="p-mbox" style="max-width:400px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>Transferir entre bancos</b><span data-x style="cursor:pointer;font-size:1.2em">\u2715</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
