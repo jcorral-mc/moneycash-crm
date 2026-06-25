@@ -58,6 +58,9 @@ export async function abonarJuridico(caso, d, perfil) {
       concepto:'Abono jurídico '+caso.cliente, origen:'JURIDICO', obs:(plan.esLiquidar?'Liquidación':'Abono')+' jurídico' }, perfil);
   }
   const detalle = (plan.esLiquidar?'Liquidación':'Abono')+' jurídico: '+money(plan.monto)+' (cap '+money(plan.cap)+' + int '+money(plan.int)+')';
+  // Desglose: el interés jurídico (40%) es INGRESO de P&L; el capital es retorno (no ingreso).
+  await db.from('desglose').insert({ fecha:new Date().toISOString().slice(0,10), cliente:caso.cliente,
+    ejecutivo:String(caso.ejecutivo||'').toUpperCase(), pago:plan.monto, capital:plan.cap, interes:plan.int, tipo:'JURIDICO' });
   await db.from('cartera_juridico_bitacora').insert({ cliente:caso.cliente, autor:(perfil&&perfil.email)||'', estatus:caso.estatus, nota:detalle });
   await logAudit(perfil, 'JURIDICO_ABONO', caso.cliente, detalle+' · saldo→'+plan.nuevoSaldo);
   return { ok:true, msg:'✅ '+detalle+'. Saldo: '+money(plan.nuevoSaldo) };

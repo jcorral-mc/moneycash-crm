@@ -15,28 +15,28 @@ export function construirBalanceMes(data, mes, anio) {
   const { desglose = [], movimientos = [], cartera = [] } = data || {};
   const yyMM = `${anio}-${String(mes + 1).padStart(2, '0')}`;
 
-  // ── INGRESOS ──
-  let tInteres = 0, tMulta = 0;
-  const porEjec = {}; const itemsMulta = [];
+  // ── INGRESOS (clasificados por TIPO de desglose; el importe vive en la columna `interes`) ──
+  //  INTERÉS real = renglones de interés EXCLUYENDO APERTURA y MULTA.
+  //  MULTA        = renglones tipo MULTA.
+  //  APERTURA     = renglones tipo APERTURA (fuente ÚNICA; NO se lee de cartera para no contar doble).
+  //  Capital cobrado NUNCA entra a ingresos (es retorno a inversionistas; vive en la col. `capital`).
+  let tInteres = 0, tMulta = 0, tApertura = 0;
+  const porEjec = {}; const itemsMulta = []; const itemsApertura = [];
   for (const r of desglose) {
     if (!enMes(r.fecha, yyMM)) continue;
-    const interes = Number(r.interes) || 0;
-    const multa = Number(r.multa) || 0;
-    if (interes > 0) {
+    const tipo = String(r.tipo || '').toUpperCase();
+    const monto = Number(r.interes) || 0;
+    if (monto <= 0) continue;
+    if (tipo === 'APERTURA') {
+      tApertura += monto;
+      itemsApertura.push({ cliente: r.cliente || '(cliente)', ejecutivo: r.ejecutivo || '', monto: Math.round(monto) });
+    } else if (tipo === 'MULTA') {
+      tMulta += monto;
+      itemsMulta.push({ cliente: r.cliente || '(cliente)', ejecutivo: r.ejecutivo || '', fecha: ddmm(r.fecha), monto: Math.round(monto) });
+    } else {
       const ej = String(r.ejecutivo || '').trim() || '(sin ejecutivo)';
-      porEjec[ej] = (porEjec[ej] || 0) + interes; tInteres += interes;
+      porEjec[ej] = (porEjec[ej] || 0) + monto; tInteres += monto;
     }
-    if (multa > 0) {
-      tMulta += multa;
-      itemsMulta.push({ cliente: r.cliente || '(cliente)', ejecutivo: r.ejecutivo || '', fecha: ddmm(r.fecha), monto: Math.round(multa) });
-    }
-  }
-  // Comisión de apertura realizada (créditos surtidos en el mes)
-  let tApertura = 0; const itemsApertura = [];
-  for (const c of cartera) {
-    if (!enMes(c.surtimiento, yyMM)) continue;
-    const m = Number(c.comision_apertura) || 0;
-    if (m > 0) { tApertura += m; itemsApertura.push({ cliente: c.nombre || '(cliente)', ejecutivo: c.ejecutivo || '', monto: Math.round(m) }); }
   }
   const interesPorEjecutivo = Object.keys(porEjec)
     .map(k => ({ ejecutivo: k, monto: Math.round(porEjec[k]) }))
@@ -48,7 +48,10 @@ export function construirBalanceMes(data, mes, anio) {
   for (const r of movimientos) {
     if (!enMes(r.fecha, yyMM)) continue;
     const tipo = String(r.origen || '').toUpperCase().trim() || 'OTROS';
-    if (tipo === 'ENTRADAS EXTRAORDINARIAS') continue;   // eso es ingreso, no gasto
+    // GASTO real únicamente: nómina, intereses a inversionistas, fijos, varios, diligencias.
+    // Se EXCLUYE el resto del libro de banco (cobranza, jurídico, surtimientos, dispersión,
+    // renovación, transferencias y entradas extraordinarias), que no son gasto de P&L.
+    if (!ETIQ[tipo]) continue;
     const monto = Number(r.monto) || 0; if (monto <= 0) continue;
     const concepto = String(r.concepto || r.subconcepto || '').trim() || (ETIQ[tipo] || tipo);
     gastos += monto;
