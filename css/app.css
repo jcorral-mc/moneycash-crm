@@ -137,3 +137,14 @@ svg{display:block}
 
 /* KPI interés cobrado */
 .kval.gold{color:var(--gold)}
+
+/* Logo MoneyCash (imagen real) */
+.brand-logo{width:30px;height:30px;border-radius:50%;object-fit:cover;display:block;box-shadow:0 1px 3px rgba(10,31,51,.25)}
+.login-logo-img{width:104px;height:104px;border-radius:50%;object-fit:cover;display:block;margin:0 auto 14px;box-shadow:0 4px 14px rgba(10,31,51,.22)}
+
+/* Gestión de cobranza */
+.rev-banner{background:#fff6f5;border:1px solid #f3c9c4;color:#7a1f17;border-radius:10px;padding:10px 12px;font-size:.82em;font-weight:600;margin-bottom:10px}
+.chk{display:flex;align-items:center;gap:8px;font-size:.88em;color:var(--ink2);padding:6px 2px;cursor:pointer}
+.chk input{width:17px;height:17px;accent-color:var(--steel)}
+.btn-link{background:none;border:none;color:var(--steel);font-size:.82em;font-weight:600;cursor:pointer;padding:2px 0}
+.btn-mini-resolver{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:.8em;font-weight:600;cursor:pointer;flex:0 0 auto}
