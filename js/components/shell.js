@@ -14,7 +14,7 @@ export function renderShell(perfil, handlers) {
     <div class="app">
       <header class="hdr">
         <div class="hdr-top">
-          <div class="brand"><div class="brand-mark">M</div><div class="brand-wm">MONEY<b>CASH</b></div></div>
+          <div class="brand"><img class="brand-logo" src="img/logo.png" alt="MoneyCash"><div class="brand-wm">MONEY<b>CASH</b></div></div>
           <div class="hdr-icons">
             <button class="hbtn" data-act="reload" title="Actualizar"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v4h-4"/></svg></button>
             <button class="hbtn" data-act="logout" title="Salir"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></button>

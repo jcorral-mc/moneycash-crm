@@ -6,9 +6,8 @@ export function renderLogin(onSuccess) {
   const root = el(`
     <div class="login-screen">
       <div class="login-box">
-        <div class="login-mark">M</div>
-        <div class="login-logo">MONEY<b>CASH</b></div>
-        <div class="login-sub">Sistema de cartera</div>
+        <img class="login-logo-img" src="img/logo.png" alt="MoneyCash">
+        <div class="login-sub">Soluciones financieras · Sistema de cartera</div>
         <label>Correo</label>
         <input type="email" id="lg-email" autocomplete="username">
         <label>Contraseña</label>

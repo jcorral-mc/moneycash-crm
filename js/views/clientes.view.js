@@ -20,10 +20,11 @@ export async function renderClientes(perfil) {
   const puedeAlta = ['ADMIN','AUX_ADMIN'].includes(perfil.rol);
 
   root.innerHTML = `
-    <div style="display:flex;gap:8px;margin-bottom:8px">
-      ${puedeAlta ? '<button class="btn-primary" id="cl-nuevo" style="flex:1">+ Nuevo cliente</button>' : ''}
-      <button class="btn-primary" id="cl-ref" style="flex:0 0 auto;background:#fff;color:var(--navy);border:1px solid var(--line)">↻ Refrescar</button>
-    </div>
+    ${puedeAlta ? `<div style="display:flex;justify-content:flex-end;margin-bottom:4px">
+      <button id="cl-nuevo" style="background:none;border:none;color:var(--steel);font-size:.82em;font-weight:600;cursor:pointer;padding:2px 0;display:inline-flex;align-items:center;gap:3px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nuevo cliente
+      </button>
+    </div>` : ''}
     <input class="inp" id="cl-q" placeholder="Buscar cliente…">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0">
       <select class="inp" id="cl-ej"><option value="">Todos los ejecutivos</option>${ejecutivos.map(e=>`<option>${e}</option>`).join('')}</select>
@@ -36,7 +37,6 @@ export async function renderClientes(perfil) {
 
   const btnNuevo = root.querySelector('#cl-nuevo');
   if (btnNuevo) btnNuevo.addEventListener('click', () => abrirAlta(perfil, () => recargar()));
-  root.querySelector('#cl-ref').addEventListener('click', () => recargar());
   function recargar(){ renderClientes(perfil).then(n => { const v = root.parentNode; if (v){ v.replaceChild(n, root); } }); }
 
   const q = root.querySelector('#cl-q'), ej = root.querySelector('#cl-ej'), tipo = root.querySelector('#cl-tipo'),

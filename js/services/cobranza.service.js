@@ -78,3 +78,54 @@ export function construirCobranza(carteraRows, calByCliente, rol, ejecutivo) {
 
   return { kpis:{ totalVencido, totalClientes, critico45:Math.round(critico45), nEjecutivos:ejecutivos.length }, ejecutivos };
 }
+
+// ── Gestión de cobranza (réplica de escalarRevision / resolverRevision) ──
+
+/** Salidas válidas al resolver un caso en revisión. */
+export const COB_SALIDAS = ['REGULARIZADO', 'JURIDICO', 'RESUELTO'];
+
+/** Etiqueta legible de cada salida (como en el Script). */
+export const COB_SALIDA_LABEL = {
+  REGULARIZADO: 'REGULARIZADO',
+  JURIDICO: 'ENVIADO A JURÍDICO',
+  RESUELTO: 'RESUELTO',
+};
+
+/**
+ * RÉPLICA de escalarRevision: exige el checklist completo (los 3) para escalar.
+ * Lanza Error con el mismo mensaje del Script si falta alguno.
+ */
+export function validarEscalamiento(checklist) {
+  const c = checklist || {};
+  if (!(c.llamoCliente === true && c.llamoRef === true && c.visitoDom === true)) {
+    throw new Error('Para escalar debes confirmar las 3 gestiones: llamó al cliente, llamó a referencias y visitó el domicilio.');
+  }
+  return true;
+}
+
+/**
+ * RÉPLICA de resolverRevision: para enviar a JURIDICO el gerente debe confirmar
+ * visita en 2 horarios distintos + que agotó la negociación/convenio.
+ */
+export function validarResolucion(salida, detalle) {
+  const sal = String(salida || '').toUpperCase();
+  if (COB_SALIDAS.indexOf(sal) < 0) throw new Error('Salida inválida.');
+  if (sal === 'JURIDICO') {
+    const d = detalle || {};
+    if (!(d.visito2Horarios === true && d.agotoNegociacion === true)) {
+      throw new Error('Para enviar a jurídico confirma: visita en 2 horarios distintos y que agotaste la negociación/convenio.');
+    }
+  }
+  return true;
+}
+
+/**
+ * Filtra el historial de comentarios por rol (igual que obtenerComentariosCobranza):
+ *  - EJECUTIVO: solo ve los comentarios que él mismo escribió.
+ *  - GERENTE/ADMIN/otros: ven todos.
+ */
+export function filtrarComentarios(rows, rol, email) {
+  if (rol !== 'EJECUTIVO') return rows;
+  const me = norm(email);
+  return rows.filter(r => norm(r.rol) === 'EJECUTIVO' && norm(r.autor) === me);
+}
