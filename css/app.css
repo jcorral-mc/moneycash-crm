@@ -148,3 +148,22 @@ svg{display:block}
 .chk input{width:17px;height:17px;accent-color:var(--steel)}
 .btn-link{background:none;border:none;color:var(--steel);font-size:.82em;font-weight:600;cursor:pointer;padding:2px 0}
 .btn-mini-resolver{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:.8em;font-weight:600;cursor:pointer;flex:0 0 auto}
+
+/* Desglose de cobros */
+.dg-mesbar{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin-bottom:12px}
+.dg-meslab{font-size:.78em;color:var(--slate)}
+.dg-banner{background:linear-gradient(135deg,var(--ink),var(--navy));border-radius:14px;padding:14px 16px;margin-bottom:8px;color:#fff}
+.dg-banner-lab{font-size:.74em;opacity:.85}
+.dg-banner-val{font-size:1.6em;font-weight:700;line-height:1.15;margin-top:2px}
+.dg-card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.dg-head{display:flex;align-items:center;gap:8px;padding:11px 13px;cursor:pointer;user-select:none}
+.dg-arrow{font-size:.95em;color:var(--slate);width:12px}
+.dg-dia{font-size:.84em;font-weight:600;text-transform:capitalize}
+.dg-n{font-size:.72em;color:var(--slate)}
+.dg-dtot{margin-left:auto;font-size:.88em;font-weight:700;color:var(--green)}
+.dg-row{display:flex;align-items:center;gap:8px;padding:9px 13px;border-top:1px solid var(--line)}
+.dg-cli{font-size:.85em;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dg-chip{font-size:.64em;font-weight:700;padding:1px 8px;border-radius:20px}
+.dg-bank{font-size:.72em;color:var(--slate)}
+.dg-monto{font-size:.92em;font-weight:700}
+.dg-ci{font-size:.64em;color:var(--slate)}
