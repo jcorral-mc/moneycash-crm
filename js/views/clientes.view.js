@@ -1,14 +1,15 @@
-// Vista Clientes — lista + ficha. Réplica de clientes.html del Script (look bancario).
-import { el, money, norm, iniciales } from '../lib/dom.js';
-import { fetchCartera, fetchAllCalendarios, fetchCalendarioCliente, fetchComentarios } from '../repositories/clientes.repo.js';
-import { agruparCalendario, construirCartera, construirFicha } from '../services/clientes.service.js';
+// Vista Clientes — réplica EXACTA de clientes.html del Script (funciones/flujo/campos).
+import { el, money, norm } from '../lib/dom.js';
+import { fetchCartera, fetchAllCalendarios, fetchCalendarioCliente, fetchComentarios, descuentoVigente } from '../repositories/clientes.repo.js';
+import { agruparCalendario, construirCartera, ordenarCartera, construirFicha } from '../services/clientes.service.js';
 import { abrirAplicarPago } from './pago.view.js';
 import { abrirAlta } from './alta.view.js';
 
 const CHIP = {
-  PAGADO:['pag','PAGADO'], PAGO_MINIMO:['min','MÍNIMO'], PAGADO_TARDE:['tar','PAGÓ TARDE'],
-  EXT_MINIMO:['ext','EXT MÍN'], PARCIAL:['par','PARCIAL'], VENCIDO:['ven','VENCIDO'], PENDIENTE:['pen','PENDIENTE'],
+  PAGADO:['pag','PAGADO'], PAGO_MINIMO:['min','PAGO MÍNIMO'], PAGADO_TARDE:['tar','PAGÓ TARDE'],
+  EXT_MINIMO:['ext','EXT MÍNIMO'], PARCIAL:['par','PARCIAL'], VENCIDO:['ven','VENCIDO'], PENDIENTE:['pen','PENDIENTE'],
 };
+const TIPOS = ['SEMANAL','QUINCENAL','MENSUAL','AMERICANO'];
 
 export async function renderClientes(perfil) {
   const root = el('<div class="view"><div class="loader">Cargando clientes…</div></div>');
@@ -16,43 +17,57 @@ export async function renderClientes(perfil) {
   const calBy = agruparCalendario(cals);
   const lista = construirCartera(cartera, calBy, perfil.rol, perfil.ejecutivo);
   const ejecutivos = [...new Set(lista.map(c=>c.ejecutivo).filter(Boolean))].sort();
-
   const puedeAlta = ['ADMIN','AUX_ADMIN'].includes(perfil.rol);
+
   root.innerHTML = `
-    ${puedeAlta ? '<button class="btn-primary" id="cl-nuevo" style="margin-bottom:10px">+ Nuevo cliente</button>' : ''}
+    <div style="display:flex;gap:8px;margin-bottom:8px">
+      ${puedeAlta ? '<button class="btn-primary" id="cl-nuevo" style="flex:1">+ Nuevo cliente</button>' : ''}
+      <button class="btn-primary" id="cl-ref" style="flex:0 0 auto;background:#fff;color:var(--navy);border:1px solid var(--line)">↻ Refrescar</button>
+    </div>
     <input class="inp" id="cl-q" placeholder="Buscar cliente…">
-    <select class="inp" id="cl-ej"><option value="">Todos los ejecutivos</option>${ejecutivos.map(e=>`<option>${e}</option>`).join('')}</select>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0">
+      <select class="inp" id="cl-ej"><option value="">Todos los ejecutivos</option>${ejecutivos.map(e=>`<option>${e}</option>`).join('')}</select>
+      <select class="inp" id="cl-tipo"><option value="">Todos los tipos</option>${TIPOS.map(t=>`<option>${t}</option>`).join('')}</select>
+      <select class="inp" id="cl-est"><option value="">Todos los estados</option><option value="VENCIDO">Vencidos</option><option value="AL DIA">Al día</option></select>
+      <select class="inp" id="cl-ord"><option value="venc">Ordenar: + vencido</option><option value="nombre">Nombre A-Z</option><option value="surt">Fecha surtimiento</option><option value="vencim">Fecha vencimiento</option><option value="saldo">Mayor saldo</option></select>
+    </div>
     <div class="resumen" id="cl-res"></div>
     <div id="cl-list"></div>`;
 
   const btnNuevo = root.querySelector('#cl-nuevo');
-  if (btnNuevo) btnNuevo.addEventListener('click', () => abrirAlta(perfil, () => renderClientes(perfil).then(n => {
-    const v = document.querySelector('.content'); if (v) { v.innerHTML=''; v.appendChild(n); }
-  })));
+  if (btnNuevo) btnNuevo.addEventListener('click', () => abrirAlta(perfil, () => recargar()));
+  root.querySelector('#cl-ref').addEventListener('click', () => recargar());
+  function recargar(){ renderClientes(perfil).then(n => { const v = root.parentNode; if (v){ v.replaceChild(n, root); } }); }
 
-  const q = root.querySelector('#cl-q'), ej = root.querySelector('#cl-ej');
-  const res = root.querySelector('#cl-res'), list = root.querySelector('#cl-list');
+  const q = root.querySelector('#cl-q'), ej = root.querySelector('#cl-ej'), tipo = root.querySelector('#cl-tipo'),
+        est = root.querySelector('#cl-est'), ord = root.querySelector('#cl-ord'),
+        res = root.querySelector('#cl-res'), list = root.querySelector('#cl-list');
 
   function pinta() {
-    const texto = (q.value||'').trim().toLowerCase(), fe = ej.value;
+    const texto=(q.value||'').trim().toLowerCase();
     let l = lista.filter(c => c.nombre.toLowerCase().includes(texto));
-    if (fe) l = l.filter(c => c.ejecutivo === fe);
-    res.textContent = `${l.length} clientes · capital ${money(l.reduce((s,c)=>s+c.capital,0))} · por cobrar ${money(l.reduce((s,c)=>s+c.saldo,0))}`;
-    list.innerHTML = l.map(c => `
-      <div class="cli ${c.estado==='VENCIDO'?'mora':''}" data-n="${encodeURIComponent(c.nombre)}">
-        <div style="min-width:0">
-          <div class="nm">${c.nombre}</div>
-          <div class="mt">${c.ejecutivo||'—'} · ${c.frecuencia||'—'} · cap ${money(c.capital)}</div>
-          <div class="mt">Próximo: ${c.proxPago} · Vence: ${c.vencimiento}</div>
+    if (ej.value)   l = l.filter(c => c.ejecutivo === ej.value);
+    if (tipo.value) l = l.filter(c => String(c.frecuencia||'').toUpperCase() === tipo.value);
+    if (est.value)  l = l.filter(c => c.estado === est.value);
+    l = ordenarCartera(l, ord.value);
+    res.textContent = `${l.length} clientes · cartera ${money(l.reduce((s,c)=>s+c.saldo,0))}`;
+    list.innerHTML = l.map(c => {
+      const amer = String(c.frecuencia||'').toUpperCase().indexOf('AMERICANO') >= 0;
+      const n = encodeURIComponent(c.nombre);
+      return `<div class="cli ${c.estado==='VENCIDO'?'mora':''}" style="display:block">
+        <div class="cli-row" data-n="${n}" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer">
+          <div style="min-width:0"><div class="nm">${c.nombre}</div><div class="mt">${c.ejecutivo||'—'} · ${c.frecuencia||'—'}</div></div>
+          <div style="text-align:right"><div class="sal num ${c.estado==='VENCIDO'?'r':''}">${money(c.saldo)}</div>
+            <div style="margin-top:4px"><span class="pill ${c.estado==='VENCIDO'?'mora':'ok'}">${c.estado==='VENCIDO'?'VENCIDO':'AL DÍA'}</span></div></div>
         </div>
-        <div style="text-align:right">
-          <div class="sal num ${c.estado==='VENCIDO'?'r':''}">${money(c.saldo)}</div>
-          <div style="margin-top:4px"><span class="pill ${c.estado==='VENCIDO'?'mora':'ok'}">${c.estado==='VENCIDO'?'VENCIDO '+money(c.vencido):'AL DÍA'}</span></div>
-        </div>
-      </div>`).join('') || '<div class="loader">Sin resultados</div>';
-    list.querySelectorAll('.cli').forEach(card => card.addEventListener('click', () => abrirFicha(decodeURIComponent(card.dataset.n), perfil)));
+        <button class="btn-primary cl-pagar" data-n="${n}" style="width:100%;margin-top:9px;background:var(--gold);color:var(--navy)">Pagar${amer?' (Americano)':''}</button>
+      </div>`;
+    }).join('') || '<div class="loader">Sin resultados</div>';
+    list.querySelectorAll('.cli-row').forEach(r => r.addEventListener('click', () => abrirFicha(decodeURIComponent(r.dataset.n), perfil)));
+    list.querySelectorAll('.cl-pagar').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); abrirAplicarPago(decodeURIComponent(b.dataset.n), perfil, () => {}); }));
   }
-  q.addEventListener('input', pinta); ej.addEventListener('change', pinta);
+  [q].forEach(e=>e.addEventListener('input', pinta));
+  [ej,tipo,est,ord].forEach(e=>e.addEventListener('change', pinta));
   pinta();
   return root;
 }
@@ -60,8 +75,18 @@ export async function renderClientes(perfil) {
 export async function abrirFicha(nombre, perfil) {
   const carteraRows = await fetchCartera();
   const cRow = carteraRows.find(x => norm(x.nombre) === norm(nombre)) || { nombre };
-  const [cal, coments] = await Promise.all([fetchCalendarioCliente(nombre), fetchComentarios(nombre)]);
+  const [cal, coments, descAut] = await Promise.all([fetchCalendarioCliente(nombre), fetchComentarios(nombre), descuentoVigente(nombre)]);
   const f = construirFicha(cRow, cal);
+  f.descuentoAutorizado = descAut;
+
+  const cajaDesc = (f.descuentoAutorizado != null)
+    ? `<div style="background:rgba(124,92,255,.08);padding:10px;border-radius:10px;text-align:center;margin-top:8px">
+         <div style="font-size:.68em;color:#7c5cff;font-weight:800">LIQUIDACIÓN AUTORIZADA HOY</div>
+         <div class="num" style="font-size:1.3em;font-weight:800;color:#7c5cff">${money(f.descuentoAutorizado)}</div></div>`
+    : `<div style="background:rgba(124,92,255,.06);padding:10px;border-radius:10px;text-align:center;margin-top:8px">
+         <div style="font-size:.68em;color:#7c5cff;font-weight:800">DESCUENTO SUGERIDO (condona ${f.pctCondonaInteres}% interés)</div>
+         <div class="num" style="font-size:1.3em;font-weight:800;color:#7c5cff">${money(f.descuentoSugerido)}</div>
+         <div style="font-size:.64em;color:var(--slate);margin-top:2px">Liquidar al 50% interés: ${money(f.liquidar50)}</div></div>`;
 
   const ov = el(`<div class="overlay" id="ficha-ov">
     <div class="ohead"><button class="back">←</button><div class="ot">${f.nombre||nombre}</div></div>
@@ -72,12 +97,11 @@ export async function abrirFicha(nombre, perfil) {
       <div class="fn">${f.nombre||nombre}</div>
       <div class="fm">${f.ejecutivo||'—'} · ${f.frecuencia||'—'}</div>
       <div class="ftrip">
-        <div class="fc"><div class="l">SALDO</div><div class="v num" style="color:var(--navy)">${money(f.saldo)}</div></div>
-        <div class="fc"><div class="l">SURTIDO</div><div class="v" style="font-size:.8em">${f.surtimiento}</div></div>
-        <div class="fc"><div class="l">VENCE</div><div class="v" style="font-size:.8em">${f.vencimiento}</div></div>
+        <div class="fc"><div class="l">SURTIDO</div><div class="v" style="font-size:.85em">${f.surtimiento}</div></div>
+        <div class="fc"><div class="l">VENCE</div><div class="v" style="font-size:.85em">${f.vencimiento}</div></div>
+        <div class="fc"><div class="l">SALDO HOY</div><div class="v num" style="color:var(--navy)">${money(f.saldo)}</div></div>
       </div>
     </div>
-    <button class="btn-primary" id="f-pago">Aplicar pago</button>
     <div class="cnt4">
       <div class="cnt"><div class="n num" style="color:var(--green)">${f.pagadosATiempo}</div><div class="l">A TIEMPO</div></div>
       <div class="cnt"><div class="n num" style="color:var(--amber)">${f.pagadosTarde}</div><div class="l">TARDE</div></div>
@@ -87,17 +111,20 @@ export async function abrirFicha(nombre, perfil) {
     <div class="sec-h"><span class="t">Capital y liquidación</span><span class="ln"></span></div>
     <div class="fcard">
       <div class="liqrow"><span>Capital original</span><b class="num">${money(f.capitalOriginal)}</b></div>
-      <div class="liqrow"><span>Capital pagado</span><b class="num">${money(f.capitalPagado)} · ${f.pctCapitalPagado}%</b></div>
+      <div class="liqrow"><span>Capital pagado (${f.pctCapitalPagado}%)</span><b class="num" style="color:var(--green)">${money(f.capitalPagado)}</b></div>
       <div class="liqrow"><span>Capital pendiente</span><b class="num">${money(f.capitalPend)}</b></div>
-      <div class="liqrow"><span>Interés pendiente</span><b class="num">${money(f.intPend)}</b></div>
-      <div class="liqrow hl"><span>Liquidar HOY (completo)</span><b class="num">${money(f.capitalPend + f.intPend)}</b></div>
-      <div class="liqrow"><span>Liquidar al 50% interés <i style="color:var(--slate);font-weight:400">(previa autorización)</i></span><b class="num">${money(f.liquidar50)}</b></div>
+      <div class="liqrow"><span>Interés pendiente</span><b class="num" style="color:var(--amber)">${money(f.intPend)}</b></div>
+      ${cajaDesc}
     </div>
+    <button class="btn-primary" id="f-pago" style="margin-top:12px">Aplicar pago</button>
     <div class="sec-h"><span class="t">Calendario de pagos</span><span class="ln"></span></div>
     <div class="fcard" style="padding:4px">
-      ${f.calendario.map(p=>{const ch=CHIP[p.estado]||CHIP.PENDIENTE; const monto=p.estado.indexOf('PAGADO')>=0||p.estado==='PAGO_MINIMO'?(p.pagado||p.montoPuntual):p.montoPuntual;
-        return `<div class="pago"><div class="izq"><span class="np">#${p.nPago||''}</span><span>${p.fecha}</span></div>
-        <div style="display:flex;align-items:center;gap:8px"><span class="num" style="font-weight:600">${money(monto)}</span><span class="chip ${ch[0]}">${ch[1]}</span></div></div>`;}).join('') || '<div class="loader">Sin calendario</div>'}
+      ${f.calendario.map(p=>{const ch=CHIP[p.estado]||CHIP.PENDIENTE; const monto=p.estado==='PAGADO_TARDE'?p.montoImpuntual:p.montoPuntual;
+        const sub = p.estado==='PARCIAL' ? `<div style="font-size:.8em;color:var(--amber);margin-top:2px">Abonado ${money(p.pagado)} · faltan ${money(p.falta)}</div>` : '';
+        return `<div class="pago"><div style="width:100%"><div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="izq"><span class="np">#${p.nPago||''}</span><span>${p.fecha}</span></div>
+          <div style="display:flex;align-items:center;gap:8px"><span class="num" style="font-weight:600">${money(monto)}</span><span class="chip ${ch[0]}">${ch[1]}</span></div>
+        </div>${sub}</div></div>`;}).join('') || '<div class="loader">Sin calendario</div>'}
     </div>
     <div class="sec-h"><span class="t">Comentarios de cobranza</span><span class="ln"></span></div>
     ${coments.map(cm=>`<div class="coment"><div class="ch"><span>${cm.autor||'—'}${cm.estado?(' · '+cm.estado):''}</span><span>${cm.fecha||''}</span></div><div class="ct">${cm.comentario||''}</div></div>`).join('') || '<div class="loader">Sin comentarios</div>'}

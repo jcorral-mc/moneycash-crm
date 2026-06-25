@@ -55,13 +55,24 @@ export function construirCartera(carteraRows, calByCliente, rol, ejecutivo) {
       capital: parseFloat(row.capital)||0, abono: parseFloat(row.abono)||0,
       saldo, vencido,
       proxPago: prox?fdate(prox):'—',
-      surtimiento: surt?fdate(surt):'—',
-      vencimiento: ultima?fdate(ultima):'—',
+      surtimiento: surt?fdate(surt):'—', surtMs: surt?surt.getTime():0,
+      vencimiento: ultima?fdate(ultima):'—', vencMs: ultima?ultima.getTime():0,
       estado: vencido>0 ? 'VENCIDO' : 'AL DIA',
     });
   }
   out.sort((a,b)=> (b.vencido-a.vencido) || a.nombre.localeCompare(b.nombre));
   return out;
+}
+
+/** Ordena la cartera según el selector (réplica del f-orden del Script). */
+export function ordenarCartera(lista, orden) {
+  const l = lista.slice();
+  if (orden === 'nombre') l.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  else if (orden === 'surt') l.sort((a,b)=>a.surtMs-b.surtMs);
+  else if (orden === 'vencim') l.sort((a,b)=>a.vencMs-b.vencMs);
+  else if (orden === 'saldo') l.sort((a,b)=>b.saldo-a.saldo);
+  else l.sort((a,b)=>(b.vencido-a.vencido) || a.nombre.localeCompare(b.nombre)); // 'venc'
+  return l;
 }
 
 /** RÉPLICA de fichaCliente: capital pagado, descuento (escala 0/25/50), contadores, calendario con estados. */
@@ -118,7 +129,9 @@ export function construirFicha(carteraRow, calRows) {
     capitalOriginal, saldo, abono, capitalPagado, capitalPend, intPend,
     pctCapitalPagado: Math.round(pctCapitalPagado*100),
     pagadosATiempo, pagadosTarde, pendientes, vencidos, multasAcum,
-    descuentoSugerido, liquidar50, descuentoAutorizado: null, // PC: _descuentoVigente (lectura de autorizaciones) pendiente
+    totalPagos: pagos.length,
+    descuentoSugerido, pctCondonaInteres: Math.round(pctCondonaInteres*100),
+    liquidar50, descuentoAutorizado: null, // se completa con descuentoVigente (repo)
     calendario,
   };
 }

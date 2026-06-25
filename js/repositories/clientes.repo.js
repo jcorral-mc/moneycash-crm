@@ -31,3 +31,17 @@ export async function fetchComentarios(cliente) {
   const { data } = await db.from('comentarios_cobranza').select('*').ilike('cliente', cliente).order('fecha', { ascending:false });
   return data || [];
 }
+
+/** Réplica de _descuentoVigente: descuento de liquidación autorizado HOY para el cliente. */
+export async function descuentoVigente(cliente) {
+  const hoy = new Date().toISOString().slice(0,10);
+  const { data } = await db.from('autorizaciones')
+    .select('tipo,referencia,estatus,detalle,monto,fecha')
+    .ilike('referencia', '%'+cliente+'%').eq('estatus','APROBADO')
+    .order('fecha', { ascending:false });
+  for (const r of (data||[])) {
+    if (String(r.tipo||'').toUpperCase().indexOf('DESCUENTO') < 0 && String(r.tipo||'').toUpperCase().indexOf('LIQUIDA') < 0) continue;
+    if (String(r.detalle||'').indexOf('[VIG:'+hoy+']') >= 0) return parseFloat(r.monto)||0;
+  }
+  return null;
+}
