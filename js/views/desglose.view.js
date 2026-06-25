@@ -7,7 +7,7 @@ import { fetchDesglose } from '../repositories/desglose.repo.js';
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 export async function abrirDesglose(perfil) {
-  const ov = el(`<div class="overlay"><div class="ohead"><button class="back">\u2190</button><div class="ot">\ud83d\udcca Desglose de cobros</div></div><div class="ocontent"><div class="loader">Cargando\u2026</div></div></div>`);
+  const ov = el(`<div class="overlay"><div class="ohead"><button class="back">\u2190</button><div class="ot">Desglose de cobros</div></div><div class="ocontent"><div class="loader">Cargando\u2026</div></div></div>`);
   document.body.appendChild(ov);
   const c = ov.querySelector('.ocontent');
   ov.querySelector('.back').addEventListener('click', () => ov.remove());
@@ -39,7 +39,7 @@ export async function abrirDesglose(perfil) {
 
     <div class="fcard" style="margin-bottom:14px">
       <div style="display:flex;align-items:center;margin-bottom:10px">
-        <span style="font-weight:600;font-size:.85em">\ud83d\udd0e Filtros</span>
+        <span style="font-weight:600;font-size:.85em">Filtros</span>
         <span id="d-limpiar" style="margin-left:auto;font-size:.78em;color:var(--steel);cursor:pointer;font-weight:600">Limpiar</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
@@ -49,7 +49,7 @@ export async function abrirDesglose(perfil) {
           <select class="inp" id="d-per"><option value="mes">Todo el mes</option><option value="hoy">Hoy</option><option value="sem">\u00daltimos 7 d\u00edas</option></select>
         </div>
       </div>
-      <input class="inp" id="d-cli" placeholder="\ud83d\udd0d Buscar cliente\u2026" style="margin-top:9px">
+      <input class="inp" id="d-cli" placeholder="Buscar cliente\u2026" style="margin-top:9px">
     </div>
 
     <div id="d-lista"></div>
@@ -103,7 +103,7 @@ export async function abrirDesglose(perfil) {
             <div class="dg-cli">${x.cliente||'\u2014'}</div>
             <div style="margin-top:3px;display:flex;align-items:center;gap:6px">
               <span class="dg-chip" style="background:${cp[0]};color:${cp[1]}">${x.ejecutivo||'\u2014'}</span>
-              <span class="dg-bank">\ud83c\udfe6 ${x.cuenta||'\u2014'}</span>
+              <span class="dg-bank">${x.cuenta||'\u2014'}</span>
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0">

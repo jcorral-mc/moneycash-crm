@@ -3,7 +3,7 @@ import { el } from '../lib/dom.js';
 import { construirLista, VIS_TIPOS, tipoAsignable, colorUrgencia } from '../services/visitas.service.js';
 import { fetchVisitas, asignarVisita, resolverVisita } from '../repositories/visitas.repo.js';
 
-const URG = { red:'#c0392b', amber:'#C9A227', blue:'#103A63', green:'#0f6e56' };
+const URG = { red:'#c0392b', amber:'#C9A227', blue:'#103A63', green:'#1E7A52' };
 
 export async function abrirVisitas(perfil) {
   if (!['ADMIN','GERENTE','AUX_ADMIN','JURIDICO','VISITAS'].includes(perfil.rol)) { alert('No autorizado para Visitas.'); return; }

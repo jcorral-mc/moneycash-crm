@@ -75,8 +75,8 @@ export function etiquetaDia(iso) {
 }
 
 /** Color del chip por ejecutivo [bg, fg] — réplica del Script. */
-const COLORS = { CESAR:['#E6F1FB','#0C447C'], LORENA:['#FBEAF0','#72243E'], JURIDICO:['#FAEEDA','#633806'], RENOVACION:['#E1F5EE','#085041'], APERTURA:['#F1EFE8','#444441'] };
-const PAL = [['#EEEDFE','#26215C'],['#FAECE7','#4A1B0C'],['#EAF3DE','#173404'],['#E6F1FB','#042C53'],['#FBEAF0','#4B1528']];
+const COLORS = { CESAR:['#E8EFF6','#103A63'], LORENA:['#FAF1DA','#8A6D14'], JURIDICO:['#EAEFF4','#3F4F5C'], RENOVACION:['#E7F3EC','#1E7A52'], APERTURA:['#E3ECF5','#2E6FB0'] };
+const PAL = [['#E8EFF6','#103A63'],['#EAEFF4','#3F4F5C'],['#FAF1DA','#8A6D14'],['#E7F3EC','#1E7A52'],['#FBEAE7','#9A3327']];
 export function colorEjecutivo(ej) {
   const e = String(ej||'').toUpperCase();
   if (COLORS[e]) return COLORS[e];

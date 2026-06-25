@@ -10,7 +10,7 @@ const U = s => String(s||'').toUpperCase();
 
 export async function abrirAplicarPago(nombre, perfil, onDone) {
   const ov = el(`<div class="overlay">
-    <div class="ohead"><button class="back">\u2190</button><div class="ot">\ud83d\udcb0 Aplicar pago</div></div>
+    <div class="ohead"><button class="back">\u2190</button><div class="ot">Aplicar pago</div></div>
     <div class="ocontent">
       <label class="alab">Buscar cliente</label>
       <input class="inp" id="p-busca" placeholder="Escribe el nombre\u2026" autocomplete="off">
@@ -34,10 +34,10 @@ export async function abrirAplicarPago(nombre, perfil, onDone) {
       <div id="p-form" style="display:none">
         <label class="alab">Tipo de pago</label>
         <div class="p-tipos">
-          <button type="button" class="p-tp on" data-t="NORMAL"><span id="lbl-normal">\ud83d\udccc Pago del periodo</span><b id="v-sug"></b></button>
-          <button type="button" class="p-tp" data-t="LIQUIDAR"><span id="lbl-liq">\ud83c\udfc1 Liquidar (50% inter\u00e9s)</span><b id="v-liq"></b></button>
-          <button type="button" class="p-tp" data-t="MINIMO"><span>\u26a1 M\u00ednimo (solo inter\u00e9s)</span><b id="v-min"></b></button>
-          <button type="button" class="p-tp" data-t="OTRO"><span>\u270f\ufe0f Otro (monto libre)</span><b></b></button>
+          <button type="button" class="p-tp on" data-t="NORMAL"><span id="lbl-normal">Pago del periodo</span><b id="v-sug"></b></button>
+          <button type="button" class="p-tp" data-t="LIQUIDAR"><span id="lbl-liq">Liquidar (50% inter\u00e9s)</span><b id="v-liq"></b></button>
+          <button type="button" class="p-tp" data-t="MINIMO"><span>M\u00ednimo (solo inter\u00e9s)</span><b id="v-min"></b></button>
+          <button type="button" class="p-tp" data-t="OTRO"><span>Otro (monto libre)</span><b></b></button>
         </div>
         <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:11px">
           <div><label class="alab">Monto ($)</label><input class="inp" type="number" id="p-monto" placeholder="0.00" inputmode="decimal"></div>
@@ -45,14 +45,14 @@ export async function abrirAplicarPago(nombre, perfil, onDone) {
         </div>
         <label class="alab">Forma de pago</label>
         <div class="p-fp">
-          <button type="button" class="p-fpb on" data-fp="DEPOSITO">\ud83c\udfe6 Dep\u00f3sito</button>
-          <button type="button" class="p-fpb" data-fp="TRANSFERENCIA">\ud83d\udcb8 Transferencia</button>
-          <button type="button" class="p-fpb" data-fp="EFECTIVO">\ud83d\udcb5 Efectivo</button>
+          <button type="button" class="p-fpb on" data-fp="DEPOSITO">Dep\u00f3sito</button>
+          <button type="button" class="p-fpb" data-fp="TRANSFERENCIA">Transferencia</button>
+          <button type="button" class="p-fpb" data-fp="EFECTIVO">Efectivo</button>
         </div>
         <button class="btn-primary" id="p-aplicar" style="margin-top:12px">APLICAR PAGO</button>
         <div style="display:flex;gap:8px;margin-top:10px">
-          <button type="button" id="p-desc" class="p-sec" style="border-color:#9c2bad;color:#9c2bad">\ud83c\udff7\ufe0f Solicitar descuento</button>
-          <button type="button" id="p-multa" class="p-sec" style="border-color:var(--amber);color:var(--amber)">\u26a0\ufe0f Quitar multa</button>
+          <button type="button" id="p-desc" class="p-sec" style="border-color:var(--gold);color:var(--amber)">Solicitar descuento</button>
+          <button type="button" id="p-multa" class="p-sec" style="border-color:var(--amber);color:var(--amber)">Quitar multa</button>
         </div>
         <div class="login-err" id="p-err"></div>
       </div>
@@ -108,11 +108,11 @@ export async function abrirAplicarPago(nombre, perfil, onDone) {
     $('#i-multa').textContent = money(r.multasAcum);
 
     const b = $('#i-banner');
-    if (r.descuentoAutorizado!=null) { b.className='p-banner morado'; b.innerHTML=`\ud83c\udff7\ufe0f <b>Liquidaci\u00f3n autorizada HOY:</b> ${money(r.descuentoAutorizado)} (vence a medianoche)`; }
-    else if (r.esImpuntual) { b.className='p-banner naranja'; b.innerHTML=`\u26a0\ufe0f <b>Pago #${r.nPagoCobrar} IMPUNTUAL</b> \u00b7 Cobrar ${money(r.montoACobrar)} (incluye multa ${money(r.multaPago)})`; }
-    else if (r.perdonVigente) { b.className='p-banner verde'; b.innerHTML=`\u2705 <b>Multa perdonada HOY</b> \u00b7 Pago #${r.nPagoCobrar} cobrar ${money(r.montoACobrar)} (sin multa)`; }
-    else if (r.nPagoCobrar>0) { b.className='p-banner azul'; b.innerHTML=`\ud83d\udccc <b>Pago #${r.nPagoCobrar} puntual</b> \u00b7 Cobrar ${money(r.montoACobrar)}`; }
-    else { b.className='p-banner verde'; b.innerHTML='\ud83c\udf89 Sin pagos pendientes'; }
+    if (r.descuentoAutorizado!=null) { b.className='p-banner morado'; b.innerHTML=`<b>Liquidaci\u00f3n autorizada HOY:</b> ${money(r.descuentoAutorizado)} (vence a medianoche)`; }
+    else if (r.esImpuntual) { b.className='p-banner naranja'; b.innerHTML=`<b>Pago #${r.nPagoCobrar} IMPUNTUAL</b> \u00b7 Cobrar ${money(r.montoACobrar)} (incluye multa ${money(r.multaPago)})`; }
+    else if (r.perdonVigente) { b.className='p-banner verde'; b.innerHTML=`<b>Multa perdonada HOY</b> \u00b7 Pago #${r.nPagoCobrar} cobrar ${money(r.montoACobrar)} (sin multa)`; }
+    else if (r.nPagoCobrar>0) { b.className='p-banner azul'; b.innerHTML=`<b>Pago #${r.nPagoCobrar} puntual</b> \u00b7 Cobrar ${money(r.montoACobrar)}`; }
+    else { b.className='p-banner verde'; b.innerHTML='Sin pagos pendientes'; }
     if (r.desglose && r.desglose.length>1) {
       const lin = r.desglose.map(d=>`#${d.nPago} ${d.fecha} ${d.tipo} ${money(d.monto)}${d.multa>0?(' +multa '+money(d.multa)):''}`).join('  \u00b7  ');
       b.innerHTML += `<div class="p-acum">Acumula ${r.desglose.length} pagos:  ${lin}</div>`;
@@ -121,7 +121,7 @@ export async function abrirAplicarPago(nombre, perfil, onDone) {
     $('#v-sug').textContent = money(r.montoACobrar);
     $('#v-min').textContent = money(r.montoMinimo);
     $('#v-liq').textContent = money(r.descuentoAutorizado!=null ? r.descuentoAutorizado : r.liquidar50);
-    $('#lbl-liq').textContent = r.descuentoAutorizado!=null ? '\ud83c\udfc1 Liquidar (autorizado hoy)' : '\ud83c\udfc1 Liquidar (50% inter\u00e9s)';
+    $('#lbl-liq').textContent = r.descuentoAutorizado!=null ? 'Liquidar (autorizado hoy)' : 'Liquidar (50% inter\u00e9s)';
     $('#i-ultimos').innerHTML = (r.ultimos&&r.ultimos.length) ? 'Últimos pagos: '+r.ultimos.map(u=>`${u.fecha} (${money(u.monto)})`).join(' \u00b7 ') : 'Sin pagos previos';
 
     $('#p-info').style.display='block'; $('#p-form').style.display='block';
@@ -165,10 +165,10 @@ export async function abrirAplicarPago(nombre, perfil, onDone) {
   // ── Modal excedente
   function abrirExcedente(monto, sug, exc) {
     const m = el(`<div class="p-modal"><div class="p-mbox">
-      <div class="p-mtit">\ud83d\udcb0 Excedente de pago</div>
+      <div class="p-mtit">Excedente de pago</div>
       <div class="p-mtxt">El cliente paga <b>${money(monto)}</b> pero el sugerido es <b>${money(sug)}</b>. Hay un excedente de <b>${money(exc)}</b>. ¿Dónde lo aplico?</div>
-      <button class="btn-primary" data-d="SIGUIENTE" style="margin-bottom:8px">\u27a1\ufe0f Aplicar al SIGUIENTE pago</button>
-      <button class="btn-primary" data-d="ULTIMO" style="background:var(--navy);margin-bottom:8px">\u2b05\ufe0f Aplicar al \u00daLTIMO pago</button>
+      <button class="btn-primary" data-d="SIGUIENTE" style="margin-bottom:8px">Aplicar al SIGUIENTE pago</button>
+      <button class="btn-primary" data-d="ULTIMO" style="background:var(--navy);margin-bottom:8px">Aplicar al \u00daLTIMO pago</button>
       <button class="p-sec" data-d="">Cancelar</button>
     </div></div>`);
     ov.appendChild(m);
@@ -181,11 +181,11 @@ export async function abrirAplicarPago(nombre, perfil, onDone) {
   // ── Modal confirmación
   function confirmar() {
     let extra='';
-    if (PEND.tipo==='NORMAL' && INFO && INFO.esImpuntual && INFO.multaPago>0) extra=`\u26a0\ufe0f Incluye multa de ${money(INFO.multaPago)}`;
+    if (PEND.tipo==='NORMAL' && INFO && INFO.esImpuntual && INFO.multaPago>0) extra=`Incluye multa de ${money(INFO.multaPago)}`;
     if (PEND.direccionExcedente==='ULTIMO') extra += (extra?' | ':'')+'Excedente \u2192 último pago';
     else if (INFO && PEND.monto>INFO.sugerido && INFO.sugerido>0) extra += (extra?' | ':'')+'Excedente \u2192 siguiente pago';
     const m = el(`<div class="p-modal"><div class="p-mbox" style="text-align:center">
-      <div style="font-size:2.2em">\ud83d\udcb0</div>
+      
       <div class="p-mtit">Confirmar pago</div>
       <div class="p-mtxt" style="margin-bottom:4px">${PEND.cliente}</div>
       <div class="num" style="font-size:1.5em;font-weight:700;color:var(--steel);margin-bottom:6px">${money(PEND.monto)}</div>

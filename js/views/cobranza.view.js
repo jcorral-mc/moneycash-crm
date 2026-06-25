@@ -49,7 +49,7 @@ export async function renderCobranza(perfil) {
           <div class="sal num" style="color:var(--${col==='blue'?'navy':'red'})">${money(monto)}</div>
         </div>`;
       }).join('')}
-    `).join('') || (revisionHTML ? '' : '<div class="note">No hay clientes en cobranza. \u2705</div>')}`;
+    `).join('') || (revisionHTML ? '' : '<div class="note">No hay clientes en cobranza.</div>')}`;
 
   root.querySelectorAll('.cobcard[data-n]').forEach(card => card.addEventListener('click', () =>
     abrirGestion(dec(card.dataset.n), Number(card.dataset.m)||0, perfil, reload)));
@@ -74,7 +74,7 @@ async function abrirGestion(cliente, montoVencido, perfil, reload) {
   const visitas = await fetchHistorialVisitas(cliente);
   const c = ov.querySelector('.ocontent');
 
-  const bannerRev = revision ? `<div class="rev-banner">\u2696\ufe0f EN REVISI\u00d3N CON GERENCIA desde ${fmt(revision.fecha_escalado)} \u00b7 escal\u00f3 ${revision.escalo||''}</div>` : '';
+  const bannerRev = revision ? `<div class="rev-banner">EN REVISI\u00d3N CON GERENCIA desde ${fmt(revision.fecha_escalado)} \u00b7 escal\u00f3 ${revision.escalo||''}</div>` : '';
   const histCom = comentarios.length
     ? comentarios.map(x => `<div class="coment"><div style="display:flex;justify-content:space-between;gap:8px"><b>${x.estado||''}</b><span style="color:var(--slate);font-size:.82em">${fmt(x.created_at||x.fecha)} \u00b7 ${x.autor||''}</span></div><div>${x.comentario||''}</div></div>`).join('')
     : '<div class="note">Sin comentarios a\u00fan.</div>';

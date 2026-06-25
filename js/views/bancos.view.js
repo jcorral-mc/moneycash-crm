@@ -5,7 +5,7 @@ import * as repo from '../repositories/bancos.repo.js';
 
 export async function abrirBancos(perfil) {
   if (!['ADMIN','GERENTE','AUX_ADMIN'].includes(perfil.rol)) { alert('Solo administración puede ver Bancos.'); return; }
-  const ov = el(`<div class="overlay"><div class="ohead"><button class="back">\u2190</button><div class="ot">\ud83c\udfe6 Bancos</div></div><div class="ocontent"><div class="loader">Cargando bancos\u2026</div></div></div>`);
+  const ov = el(`<div class="overlay"><div class="ohead"><button class="back">\u2190</button><div class="ot">Bancos</div></div><div class="ocontent"><div class="loader">Cargando bancos\u2026</div></div></div>`);
   document.body.appendChild(ov);
   const c = ov.querySelector('.ocontent');
   ov.querySelector('.back').addEventListener('click', () => ov.remove());
@@ -27,7 +27,7 @@ export async function abrirBancos(perfil) {
       <div class="bk-hero">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:.78em;opacity:.85">Saldo total \u00b7 ${R.cuentas.length} cuentas</span>
-          <span id="bk-eye" style="cursor:pointer;font-size:1.05em">\ud83d\udc41\ufe0f</span>
+          <span id="bk-eye" style="cursor:pointer;display:inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
         </div>
         <div class="bk-saldo num" id="bk-total">${HIDE?'\u2022\u2022\u2022\u2022\u2022\u2022':money(R.saldoTotal)}</div>
         <div style="font-size:.72em;opacity:.85;margin-top:2px;text-transform:capitalize">${R.mesVista}</div>
@@ -40,12 +40,12 @@ export async function abrirBancos(perfil) {
       </div>
 
       ${opera ? `<div class="bk-acc">
-        <button id="bk-tr">\ud83d\udd04<br>Transferir</button>
-        <button id="bk-in" style="background:var(--green)">\u2198<br>Entrada</button>
-        <button id="bk-out" style="background:var(--red)">\u2197<br>Salida</button>
+        <button id="bk-tr">Transferir</button>
+        <button id="bk-in" style="background:var(--green)">Entrada</button>
+        <button id="bk-out" style="background:var(--red)">Salida</button>
       </div>` : ''}
 
-      <input class="inp" id="bk-q" placeholder="\ud83d\udd0d Buscar en todos los bancos\u2026" style="margin-top:12px">
+      <input class="inp" id="bk-q" placeholder="Buscar en todos los bancos\u2026" style="margin-top:12px">
       <div class="bk-chips">
         <button class="bk-chip on" data-f="todos">Todos</button>
         <button class="bk-chip" data-f="ingreso">Dep\u00f3sitos</button>
@@ -63,7 +63,7 @@ export async function abrirBancos(perfil) {
       <div class="sec-h" style="margin-top:18px"><span class="t">Cuentas \u2014 toca para ver detalle</span><span class="ln"></span></div>
       <div class="bk-cuentas" id="bk-cuentas"></div>`;
 
-    c.querySelector('#bk-eye').addEventListener('click', () => { HIDE=!HIDE; c.querySelector('#bk-eye').textContent=HIDE?'\ud83d\ude48':'\ud83d\udc41\ufe0f'; c.querySelector('#bk-total').textContent=HIDE?'\u2022\u2022\u2022\u2022\u2022\u2022':money(R.saldoTotal); });
+    c.querySelector('#bk-eye').addEventListener('click', () => { HIDE=!HIDE; c.querySelector('#bk-eye').innerHTML=HIDE?`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9.9 4.2A10.9 10.9 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.2 3.2M6.6 6.6A18 18 0 0 0 2 12s3 8 10 8a10.9 10.9 0 0 0 5.4-1.4"/><path d="m2 2 20 20"/></svg>`:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>`; c.querySelector('#bk-total').textContent=HIDE?'\u2022\u2022\u2022\u2022\u2022\u2022':money(R.saldoTotal); });
     const q=c.querySelector('#bk-q'); q.addEventListener('input', renderMovs);
     c.querySelectorAll('.bk-chip').forEach(ch => ch.addEventListener('click', () => {
       FILTRO=ch.dataset.f; VERMAS=false; c.querySelectorAll('.bk-chip').forEach(x=>x.classList.toggle('on', x===ch)); renderMovs();
@@ -74,7 +74,7 @@ export async function abrirBancos(perfil) {
       c.querySelector('#bk-in').addEventListener('click', () => modalDirecto('INGRESO'));
       c.querySelector('#bk-out').addEventListener('click', () => modalDirecto('SALIDA'));
     }
-    c.querySelector('#bk-cuentas').innerHTML = R.cuentas.map(ct=>`<div class="bk-cta" data-c="${encodeURIComponent(ct.cuenta)}"><div style="font-weight:600;font-size:.86em">\ud83c\udfe6 ${ct.cuenta}</div><div class="num" style="font-size:.9em;color:var(--ink);font-weight:700;margin-top:2px">${money(ct.saldo)}</div></div>`).join('') || '<div class="note">Sin cuentas</div>';
+    c.querySelector('#bk-cuentas').innerHTML = R.cuentas.map(ct=>`<div class="bk-cta" data-c="${encodeURIComponent(ct.cuenta)}"><div style="font-weight:600;font-size:.86em">${ct.cuenta}</div><div class="num" style="font-size:.9em;color:var(--ink);font-weight:700;margin-top:2px">${money(ct.saldo)}</div></div>`).join('') || '<div class="note">Sin cuentas</div>';
     c.querySelectorAll('.bk-cta').forEach(d => d.addEventListener('click', () => pintarDetalle(decodeURIComponent(d.dataset.c))));
     renderMovs();
   }
@@ -95,7 +95,13 @@ export async function abrirBancos(perfil) {
     if (!shown.length) { box.innerHTML='<div class="note" style="text-align:center;padding:16px">Sin movimientos con ese filtro.</div>'; return; }
     box.innerHTML = shown.map(m => {
       const tr=m.transfer, ing=m.tipo==='INGRESO';
-      const cls = tr?'tr':(ing?'in':'out'); const ic = tr?'\ud83d\udd04':(ing?'\u2198':'\u2197'); const signo = ing?'+':'\u2212';
+      const cls = tr?'tr':(ing?'in':'out');
+      const ic = tr
+        ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h14"/><path d="m14 4 3 3-3 3"/><path d="M21 17H7"/><path d="m10 14-3 3 3 3"/></svg>'
+        : (ing
+          ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="m5 12 7 7 7-7"/></svg>'
+          : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>');
+      const signo = ing?'+':'\u2212';
       return `<div class="bk-mov">
         <div class="bk-ic ${cls}">${ic}</div>
         <div style="flex:1;min-width:0"><div class="bk-cpt">${m.concepto||'(sin concepto)'}</div>
@@ -110,7 +116,7 @@ export async function abrirBancos(perfil) {
     c.innerHTML = `
       <button class="p-sec" id="bk-volver" style="width:auto;margin-bottom:10px">\u2190 Cuentas</button>
       <div class="fcard" style="border-left:4px solid var(--ink)">
-        <div class="fn">\ud83c\udfe6 ${cuenta}</div>
+        <div class="fn">${cuenta}</div>
         <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:.85em">
           <div style="text-align:center;flex:1"><div class="bk-ml">INGRESOS</div><div class="num" id="dt-ing" style="font-weight:700;color:var(--green)">$0</div></div>
           <div style="text-align:center;flex:1"><div class="bk-ml">EGRESOS</div><div class="num" id="dt-egr" style="font-weight:700;color:var(--red)">$0</div></div>
@@ -131,7 +137,7 @@ export async function abrirBancos(perfil) {
         <input class="inp" id="ft-texto" placeholder="Ej: nombre, multa, abono\u2026">
         <button class="p-sec" id="ft-limpiar" style="margin-top:10px;width:100%">Limpiar filtros</button>
       </div>
-      <button class="btn-primary" id="dt-export" style="background:var(--green);margin-bottom:8px">\ud83d\udce4 Exportar movimientos (seg\u00fan filtros)</button>
+      <button class="btn-primary" id="dt-export" style="background:var(--green);margin-bottom:8px">Exportar movimientos (seg\u00fan filtros)</button>
       <div id="dt-count" class="note" style="font-weight:600;margin:8px 0"></div>
       <div id="dt-movs"></div>`;
 
@@ -173,7 +179,7 @@ export async function abrirBancos(perfil) {
   function modalTransfer() {
     const ops = R.cuentas.map(c=>`<option>${c.cuenta}</option>`).join('');
     const m = el(`<div class="p-modal"><div class="p-mbox" style="max-width:400px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>\ud83d\udd04 Transferir entre bancos</b><span data-x style="cursor:pointer;font-size:1.2em">\u2715</span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b>Transferir entre bancos</b><span data-x style="cursor:pointer;font-size:1.2em">\u2715</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div><label class="alab">De</label><select class="inp" id="t-o">${ops}</select></div>
         <div><label class="alab">A</label><select class="inp" id="t-d">${ops}</select></div>

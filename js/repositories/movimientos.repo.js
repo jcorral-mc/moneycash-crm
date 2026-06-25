@@ -25,3 +25,32 @@ export async function fetchMovimientos() {
   }
   return all;
 }
+
+/** Movimientos de un banco (reversables): para el flujo de reverso. */
+export async function movListarPorBanco(banco, n=40) {
+  const { data } = await db.from('movimientos').select('*')
+    .ilike('cuenta', banco).order('fecha',{ascending:false}).limit(n);
+  return (data||[]).filter(m => !m.reversado).map(m => ({
+    id:m.id, fecha:String(m.fecha||'').slice(0,10), tipo:String(m.origen||m.tipo||''),
+    subconcepto:String(m.subconcepto||''), concepto:String(m.concepto||''), monto:Number(m.monto)||0,
+  }));
+}
+
+/** RÉPLICA de solicitarReversoMov: deja la solicitud de reverso para que el admin la autorice. */
+export async function solicitarReversoMov({ movId, banco, fecha, concepto, monto, motivo }, perfil) {
+  const solicita = (perfil && (perfil.email||perfil.nombre)) || '';
+  const detalle = `${motivo||'Reverso solicitado'} · ${fecha} · ${concepto} · $${Number(monto)||0} [MOVID:${movId}]`;
+  const { error } = await db.from('autorizaciones').insert({
+    tipo:'REVERSO MOVIMIENTO', referencia: banco, solicita, detalle, estatus:'PENDIENTE',
+  });
+  if (error) throw error;
+  await logAudit(perfil, 'REVERSO_SOLICITADO', banco, detalle);
+  return { ok:true, msg:'Solicitud de reverso enviada al administrador.' };
+}
+
+/** Subconceptos (personas) ya usados por tipo — para autocompletar empleados/inversionistas. */
+export async function personasUsadas(tipo) {
+  const { data } = await db.from('movimientos').select('subconcepto').eq('origen', tipo).not('subconcepto','is',null);
+  const set = new Set(); (data||[]).forEach(r => { const s=String(r.subconcepto||'').trim(); if (s) set.add(s); });
+  return [...set].sort();
+}
