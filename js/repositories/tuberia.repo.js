@@ -4,7 +4,8 @@ import { logAudit } from '../lib/audit.js';
 import { siguienteEtapa, generarFolio } from '../services/tuberia.service.js';
 import { construirAlta } from '../services/calendario.service.js';
 import { calcularSurtimiento, validarReparto } from '../services/surtir.service.js';
-import { calcularScore } from '../services/evaluacion.service.js';
+import { calcularEtapa } from '../services/tuberia_etapas.service.js';
+import { validarEvaluacion } from '../services/evaluacion.service.js';
 import { crearAlta, existeCliente } from '../repositories/alta.repo.js';
 import { agregarMovimientoBanco } from '../repositories/bancos.repo.js';
 
@@ -39,24 +40,97 @@ export async function actualizarProspecto(id, updates, perfil) {
   return { ok:true };
 }
 
-/** Guarda la evaluación de riesgo (score + respuestas). */
-export async function guardarEvaluacion(prospecto, respuestas, perfil) {
-  const score = calcularScore(respuestas);
-  const cot = prospecto.cotizacion_json || {};
-  cot.evaluacion = { respuestas, score, fecha: hoy() };
-  await db.from('prospectos').update({ score_eval:score, cotizacion_json:cot }).eq('id', prospecto.id);
-  await logAudit(perfil, 'TUB_EVALUACION', prospecto.nombre, 'score '+score);
-  return { ok:true, score };
+/** Refleja en `status` la etapa que CALCULA el motor (status deja de ser editable por el usuario). */
+async function sincronizarEtapa(prospecto, perfil, extra) {
+  const etapa = calcularEtapa(prospecto);
+  await db.from('prospectos').update({ status: etapa, ...(extra || {}) }).eq('id', prospecto.id);
+  prospecto.status = etapa;
+  return etapa;
 }
 
-/** Guarda el expediente KYC dentro de cotizacion_json.expediente. */
+/** Información → "Empezar proceso": abre el avance del expediente. */
+export async function empezarProceso(prospecto, perfil) {
+  const cot = prospecto.cotizacion_json || {};
+  cot.proceso = { iniciado: true, fecha: hoy(), por: (perfil && perfil.email) || '' };
+  prospecto.cotizacion_json = cot;
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  const etapa = await sincronizarEtapa(prospecto, perfil);
+  await logAudit(perfil, 'TUB_EMPEZAR', prospecto.nombre, 'proceso iniciado');
+  return { ok: true, etapa };
+}
+
+/** Evaluación V2 (SIN score): exige todas las preguntas; marca `completa`. */
+export async function guardarEvaluacion(prospecto, respuestas, perfil) {
+  const { completa, faltan } = validarEvaluacion(respuestas);
+  if (!completa) throw new Error('Faltan ' + faltan.length + ' pregunta(s) por contestar. Todas son obligatorias.');
+  const cot = prospecto.cotizacion_json || {};
+  cot.evaluacion = { respuestas, completa: true, fecha: hoy(), por: (perfil && perfil.email) || '' };
+  prospecto.cotizacion_json = cot;
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  const etapa = await sincronizarEtapa(prospecto, perfil);
+  await logAudit(perfil, 'TUB_EVALUACION', prospecto.nombre, 'evaluación completa');
+  return { ok: true, etapa };
+}
+
+/** Expediente V2: guarda KYC y marca `completo` (la vista valida los obligatorios antes de llamar). */
 export async function guardarKYC(prospecto, expediente, perfil) {
   const cot = prospecto.cotizacion_json || {};
-  cot.expediente = expediente;
-  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  cot.expediente = { ...expediente, completo: true, fecha: hoy() };
   prospecto.cotizacion_json = cot;
-  await logAudit(perfil, 'TUB_KYC', prospecto.nombre, 'expediente actualizado');
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  const etapa = await sincronizarEtapa(prospecto, perfil);
+  await logAudit(perfil, 'TUB_KYC', prospecto.nombre, 'expediente completo');
+  return { ok: true, etapa };
+}
+
+/** Documentación: guarda la selección/subida de documentos (uno por uno). */
+export async function guardarDocumentos(prospecto, items, perfil) {
+  const cot = prospecto.cotizacion_json || {};
+  cot.documentos = { ...(cot.documentos || {}), items };
+  prospecto.cotizacion_json = cot;
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  await sincronizarEtapa(prospecto, perfil);
   return { ok: true };
+}
+
+/** "Solicitar documentos": marca solicitados, fija fecha y pasa a Esperando documentos (+WhatsApp). */
+export async function solicitarDocumentos(prospecto, items, perfil) {
+  const cot = prospecto.cotizacion_json || {};
+  cot.documentos = { items, solicitadosFecha: hoy(), por: (perfil && perfil.email) || '' };
+  prospecto.cotizacion_json = cot;
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  const etapa = await sincronizarEtapa(prospecto, perfil);
+  await logAudit(perfil, 'TUB_SOLICITAR_DOCS', prospecto.nombre, items.filter(d => d.solicitado).length + ' documentos');
+  return { ok: true, etapa };
+}
+
+/** Validación Jurídica (Tabata): APROBADO | RECHAZADO | CORRECCIONES (regresa al módulo). */
+export async function validarJuridico(prospecto, decision, modulo, nota, perfil) {
+  const cot = prospecto.cotizacion_json || {};
+  cot.validacion = { decision, modulo: modulo || null, nota: nota || '', por: (perfil && perfil.email) || '', fecha: hoy() };
+  // Si se piden correcciones, se limpia el flag del módulo a corregir para que regrese ahí.
+  if (decision === 'CORRECCIONES') {
+    if (modulo === 'Evaluación' && cot.evaluacion) cot.evaluacion.completa = false;
+    if (modulo === 'Expediente' && cot.expediente) cot.expediente.completo = false;
+    if (modulo === 'Documentación' && cot.documentos) cot.documentos.solicitadosFecha = null;
+  }
+  prospecto.cotizacion_json = cot;
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  const etapa = await sincronizarEtapa(prospecto, perfil);
+  await logAudit(perfil, 'TUB_VALIDACION', prospecto.nombre, decision + (modulo ? (' → ' + modulo) : ''));
+  return { ok: true, etapa };
+}
+
+/** Visita: resultado APROBADA | RECHAZADA (nunca "pendiente"). */
+export async function resolverVisita(prospecto, resultado, datos, perfil) {
+  const cot = prospecto.cotizacion_json || {};
+  cot.visita = { resultado, comentarios: (datos && datos.comentarios) || '', fotos: (datos && datos.fotos) || [],
+    por: (perfil && perfil.email) || '', fecha: hoy() };
+  prospecto.cotizacion_json = cot;
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  const etapa = await sincronizarEtapa(prospecto, perfil);
+  await logAudit(perfil, 'TUB_VISITA', prospecto.nombre, resultado);
+  return { ok: true, etapa };
 }
 
 /** Guarda el checklist de documentos dentro de cotizacion_json.checklist. */
