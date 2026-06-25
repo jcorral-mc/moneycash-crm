@@ -75,6 +75,7 @@ export async function actualizarCaso(caso, d, perfil) {
   const upd = {};
   if (d.estatus) { if (JUR_ESTADOS.indexOf(d.estatus)<0) throw new Error('Estatus inválido.'); upd.estatus = d.estatus; }
   if (d.proxDiligencia !== undefined) upd.prox_diligencia = d.proxDiligencia || null;
+  if (d.saldoDemanda !== undefined && d.saldoDemanda !== '') upd.saldo_demanda = parseFloat(d.saldoDemanda)||0;
   if (!Object.keys(upd).length) return { ok:true };
   await db.from('cartera_juridico').update(upd).eq('id', caso.id);
   const detalle = (d.estatus?('Estatus → '+d.estatus):'') + (d.proxDiligencia?(' · Diligencia '+d.proxDiligencia):'');

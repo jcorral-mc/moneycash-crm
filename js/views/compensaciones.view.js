@@ -1,104 +1,120 @@
-// Vista Compensaciones — tabla (admin/gerente) o medidor propio (ejecutivo). Config + corte (admin).
+// Vista Compensación — réplica del Script: selector mes/año + pestañas Medidor/Equipo/Ajustes.
 import { el, money } from '../lib/dom.js';
 import { siguienteEscalon } from '../services/compensaciones.service.js';
 import * as repo from '../repositories/compensaciones.repo.js';
 
-const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const colPct = p => p>=95?'var(--green)':(p>=80?'var(--gold)':'var(--red)');
 
 export async function abrirCompensaciones(perfil) {
-  const ov = el(`<div class="overlay"><div class="ohead"><button class="back">←</button><div class="ot">Compensaciones</div></div><div class="ocontent"><div class="loader">Cargando…</div></div></div>`);
+  const admin = ['ADMIN','GERENTE'].includes(perfil.rol);
+  const ov = el(`<div class="overlay"><div class="ohead"><button class="back">\u2190</button><div class="ot">Compensación</div></div><div class="ocontent"><div class="loader">Calculando\u2026</div></div></div>`);
   document.body.appendChild(ov);
   const c = ov.querySelector('.ocontent');
   ov.querySelector('.back').addEventListener('click', () => ov.remove());
-  const hoy = new Date(); let mes = hoy.getMonth()+1, anio = hoy.getFullYear();
-  const esEjec = perfil.rol === 'EJECUTIVO';
 
-  function selectorMesAnio() {
-    const anios=[]; for (let y=anio+1; y>=2025; y--) anios.push(y);
-    return `<div style="display:flex;gap:8px;margin-bottom:12px">
-      <select class="inp" id="cm-mes" style="flex:1">${MESES.map((nm,i)=>`<option value="${i+1}" ${i+1===mes?'selected':''}>${nm}</option>`).join('')}</select>
-      <select class="inp" id="cm-anio" style="flex:0 0 110px">${anios.map(a=>`<option ${a===anio?'selected':''}>${a}</option>`).join('')}</select></div>`;
+  const hoy = new Date();
+  let anio = hoy.getFullYear(), mes = hoy.getMonth()+1, tab = 'mia';
+
+  const aniosOpt = []; for (let y=hoy.getFullYear(); y>=hoy.getFullYear()-2; y--) aniosOpt.push(y);
+
+  c.innerHTML = `
+    <div class="comp-sel">
+      <select class="inp" id="cp-mes" style="width:auto">${MESES.map((m,i)=>`<option value="${i+1}" ${i+1===mes?'selected':''}>${m}</option>`).join('')}</select>
+      <select class="inp" id="cp-anio" style="width:auto">${aniosOpt.map(y=>`<option ${y===anio?'selected':''}>${y}</option>`).join('')}</select>
+    </div>
+    ${admin?`<div class="comp-tabs">
+      <button class="comp-tab on" data-t="mia">Mi medidor</button>
+      <button class="comp-tab" data-t="todos">Equipo</button>
+      ${perfil.rol==='ADMIN'?`<button class="comp-tab" data-t="config">Ajustes</button>`:''}
+    </div>`:''}
+    <div id="cp-cont"><div class="loader">Calculando\u2026</div></div>`;
+
+  const $ = s => c.querySelector(s);
+  $('#cp-mes').addEventListener('change', ()=>{ mes=+$('#cp-mes').value; recargar(); });
+  $('#cp-anio').addEventListener('change', ()=>{ anio=+$('#cp-anio').value; recargar(); });
+  c.querySelectorAll('.comp-tab').forEach(b=>b.addEventListener('click',()=>{ tab=b.dataset.t; c.querySelectorAll('.comp-tab').forEach(x=>x.classList.toggle('on',x===b)); recargar(); }));
+
+  async function recargar() {
+    const cont = $('#cp-cont'); cont.innerHTML = '<div class="loader">Calculando\u2026</div>';
+    if (tab==='mia') await medidor(cont);
+    else if (tab==='todos') await equipo(cont);
+    else await ajustes(cont);
   }
+
   function barra(pct) {
     const w = Math.min(100, Math.max(0, pct));
-    const col = pct>=100 ? 'var(--green)' : pct>=80 ? 'var(--gold)' : 'var(--steel)';
-    return `<div class="ejbar-t" style="height:14px"><div class="ejbar-f" style="width:${w}%;background:${col}"></div></div>`;
+    return `<div class="comp-barra"><div class="comp-fill" style="width:${w}%;background:${colPct(pct)}"></div>
+      <span class="comp-mark" style="left:80%"></span><span class="comp-mark" style="left:85%"></span><span class="comp-mark" style="left:95%"></span><span class="comp-mark fuerte" style="left:100%"></span></div>
+      <div class="comp-marks"><span>80%</span><span>85%</span><span>95%</span><span>100%</span><span>110%</span></div>`;
   }
 
-  async function cargarEjec() {
-    c.innerHTML = '<div class="loader">Cargando…</div>';
-    const { calc, apertura } = await repo.calcularEjecutivo(perfil.ejecutivo, anio, mes);
-    const sig = siguienteEscalon(calc.pct);
-    c.innerHTML = selectorMesAnio() + `
-      <div class="kcard" style="margin-bottom:12px">
-        <div class="klab">Tu cumplimiento — ${MESES[mes-1]} ${anio}</div>
-        <div class="kval num ${calc.pct>=100?'green':''}" style="${calc.pct<100&&calc.pct>=80?'color:var(--gold)':''}">${calc.pct}%</div>
+  async function medidor(cont) {
+    const { calc, cfg } = await repo.calcularEjecutivo(perfil.ejecutivo||perfil.nombre, anio, mes);
+    const sig = siguienteEscalon(calc.pct, cfg);
+    cont.innerHTML = `
+      <div class="comp-medidor">
+        <div class="comp-med-top"><div><div class="comp-lab">Voy en</div><div class="comp-pct">${calc.pct}%</div></div>
+          <div style="text-align:right"><div class="comp-lab">de mi meta</div><div style="font-weight:700">${money(calc.cobrado)} / ${money(calc.meta)}</div></div></div>
         ${barra(calc.pct)}
-        <div class="kfoot" style="margin-top:6px">Cobrado ${money(calc.cobrado)} de meta ${money(calc.meta)}</div>
       </div>
-      <div class="fcard">
-        <div class="liqrow"><span>Cartera base</span><b class="num">${money(calc.base)}</b></div>
-        <div class="liqrow"><span>Meta (interés del mes)</span><b class="num">${money(calc.meta)}</b></div>
-        <div class="liqrow"><span>Interés cobrado</span><b class="num">${money(calc.cobrado)}</b></div>
-        <div class="liqrow hl"><span>Tu comisión (${calc.pctComision}%)</span><b class="num" style="color:var(--green)">${money(calc.comision)}</b></div>
-        ${calc.bonoApertura?`<div class="liqrow"><span>Bono apertura</span><b class="num">${money(calc.bonoApertura)}</b></div>`:''}
+      <div class="comp-cards">
+        <div class="fcard" style="border-left:4px solid var(--green)"><div class="p-cl">Interés cobrado</div><div class="num" style="font-size:1.4em;font-weight:700;color:var(--green)">${money(calc.cobrado)}</div><div class="mt">este mes</div></div>
+        <div class="fcard" style="border-left:4px solid var(--gold)"><div class="p-cl">Voy ganando</div><div class="num" style="font-size:1.4em;font-weight:700;color:var(--gold)">${money(calc.comision)}</div><div class="mt">comisión ${calc.pctComision}%${calc.bonoApertura>0?(' + '+money(calc.bonoApertura)+' apertura'):''}</div></div>
       </div>
-      ${sig?`<div class="note" style="margin-top:10px">Siguiente escalón: llega a <b>${sig.desde}%</b> para cobrar <b>${sig.pct}%</b>${sig.apertura?' + bono apertura':''}.</div>`:`<div class="note" style="margin-top:10px">¡Estás en el escalón más alto! 🎉</div>`}
-      ${!calc.llegaAMeta?`<div class="note" style="margin-top:8px;border-color:var(--gold)">Recuerda: las comisiones se cobran solo al llegar al 100% de la meta.</div>`:''}`;
-    wireSelector(cargarEjec);
+      ${calc.aperturaTotal>0?`<div class="fcard" style="border-left:4px solid var(--steel)"><div style="display:flex;justify-content:space-between;align-items:center"><div><div class="p-cl">Comisiones por apertura</div><div class="num" style="font-size:1.1em;font-weight:700;color:var(--steel)">${money(calc.aperturaTotal)}</div></div><div class="mt" style="text-align:right">${calc.incluyeApertura&&calc.pct>=100?'Incluida en tu pago':'Solo aplica al 100%'}</div></div></div>`:''}
+      ${sig?`<div class="note" style="border-color:var(--gold)">Te faltan <b>${money(Math.max(0,Math.ceil((sig.desde/100)*calc.meta - calc.cobrado)))}</b> para llegar al <b>${sig.desde}%</b> y subir tu comisión a <b>${sig.pct}%${sig.apertura?' + apertura':''}</b>.</div>`:`<div class="note" style="border-color:var(--green)">¡Estás en el escalón máximo! Excelente.</div>`}
+      <div class="fcard" style="border-left:4px solid var(--steel)"><div class="p-cl">Crecimiento de cartera vs. base</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><div><span style="font-size:1.2em;font-weight:700;color:var(--steel)">${calc.crecimiento>=0?'+':''}${calc.crecimiento}%</span> <span class="mt">(${money(calc.base)} \u2192 ${money(calc.carteraActual)})</span></div><div class="mt" style="text-align:right">Para el bono<br>necesitas +5%</div></div></div>
+      <div class="comp-esc-tit">Mis escalones</div>
+      <div class="fcard" style="padding:6px 14px">${cfg.escalones.map(e=>{
+        const aqui=calc.pct>=e.desde && (e.hasta>=99999||calc.pct<=e.hasta);
+        const lbl=e.hasta>=99999?(e.desde+'%+'):(e.desde+'% – '+Math.floor(e.hasta)+'%');
+        const val=e.pct===0?'Sin comisión':(e.pct+'%'+(e.apertura?' + apertura':''));
+        return `<div class="comp-esc ${aqui?'aqui':''} ${e.pct===0?'cero':''}"><span>${lbl}${aqui?' \u2190 aquí':''}</span><span>${val}</span></div>`;
+      }).join('')}</div>
+      <div class="mt" style="text-align:center;margin-top:10px">Base: ${money(calc.base)} · Meta = ${money(calc.meta)}</div>`;
   }
 
-  async function cargarAdmin() {
-    c.innerHTML = '<div class="loader">Cargando…</div>';
+  async function equipo(cont) {
     const { filas, totales } = await repo.calcularMes(anio, mes);
-    const esAdmin = perfil.rol === 'ADMIN';
-    c.innerHTML = selectorMesAnio() + `
-      <div class="kpis"><div class="kcard"><div class="klab">Comisiones del mes</div><div class="kval num gold">${money(totales.comision)}</div><div class="kfoot">cobrado ${money(totales.cobrado)} / meta ${money(totales.meta)}</div></div></div>
-      ${esAdmin?`<div style="display:flex;gap:8px;margin-bottom:10px"><button class="btn-primary" id="cm-bases" style="flex:1;background:var(--steel)">Editar bases</button><button class="btn-primary" id="cm-corte" style="flex:1">Correr corte</button></div>`:''}
-      ${filas.map(f=>`<div class="cli" style="display:block">
-        <div style="display:flex;justify-content:space-between"><div class="nm">${f.ejecutivo}</div><b class="num ${f.pct>=100?'green':''}">${f.pct}%</b></div>
-        ${barra(f.pct)}
-        <div class="mt" style="margin-top:6px">Base ${money(f.base)} · meta ${money(f.meta)} · cobrado ${money(f.cobrado)} · comisión <b>${money(f.comision)}</b> (${f.pctComision}%)${f.bonoApertura?(' + apertura '+money(f.bonoApertura)):''}</div>
-      </div>`).join('') || '<div class="note">No hay bases cargadas para este mes. Usa "Editar bases".</div>'}`;
-    wireSelector(cargarAdmin);
-    if (esAdmin) {
-      c.querySelector('#cm-bases').addEventListener('click', editarBases);
-      c.querySelector('#cm-corte').addEventListener('click', async ()=>{
-        if(!confirm('¿Congelar la cartera actual como base del próximo mes?')) return;
-        try{ const r=await repo.correrCorte(perfil); alert(r.msg); }catch(e){ alert('❌ '+e.message); }
-      });
-    }
+    cont.innerHTML = `
+      <div class="kpis kpis-3">
+        <div class="kcard"><div class="klab">Meta total</div><div class="kval num">${money(totales.meta)}</div></div>
+        <div class="kcard"><div class="klab">Cobrado</div><div class="kval num" style="color:var(--green)">${money(totales.cobrado)}</div></div>
+        <div class="kcard"><div class="klab">Comisiones</div><div class="kval num" style="color:var(--gold)">${money(totales.comision)}</div></div>
+      </div>
+      ${filas.map(f=>`<div class="fcard" style="border-left:4px solid ${colPct(f.pct)}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b>${f.ejecutivo}</b><span style="font-weight:700;color:${colPct(f.pct)}">${f.pct}%</span></div>
+        <div class="comp-barra mini"><div class="comp-fill" style="width:${Math.min(100,f.pct)}%;background:${colPct(f.pct)}"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:.72em;color:var(--slate);margin-top:6px"><span>Cobrado ${money(f.cobrado)} / ${money(f.meta)}</span><span>Comisión <b style="color:var(--ink)">${money(f.comision)}</b></span></div>
+      </div>`).join('')||'<div class="note">Sin bases configuradas para este mes.</div>'}`;
   }
 
-  function editarBases() {
-    repo.fetchBases(anio, mes).then(bases => {
-      const sub = el(`<div class="overlay"><div class="ohead"><button class="back">←</button><div class="ot">Bases ${MESES[mes-1]} ${anio}</div></div>
-        <div class="ocontent">
-          <div class="note" style="margin-bottom:10px">Cartera base por ejecutivo (la meta es ${'%'} de este monto).</div>
-          <div id="b-list">${bases.map(b=>`<div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><span style="flex:1">${b.ejecutivo}</span><input class="inp" data-ej="${b.ejecutivo}" value="${b.cartera_base}" inputmode="decimal" style="flex:0 0 140px;margin:0"></div>`).join('')||'<div class="note">Sin bases. Agrega abajo.</div>'}</div>
-          <div class="sec-h"><span class="t">Agregar ejecutivo</span><span class="ln"></span></div>
-          <input class="inp" id="b-nej" placeholder="Nombre (ej. CESAR)"><input class="inp" id="b-nmonto" placeholder="Cartera base" inputmode="decimal">
-          <button class="btn-primary" id="b-go">Guardar bases</button><div class="login-err" id="b-e"></div></div></div>`);
-      document.body.appendChild(sub);
-      sub.querySelector('.back').addEventListener('click', ()=>sub.remove());
-      sub.querySelector('#b-go').addEventListener('click', async ()=>{
-        try{
-          for (const inp of sub.querySelectorAll('[data-ej]')) await repo.guardarBase(inp.dataset.ej, anio, mes, inp.value, perfil);
-          const nej = sub.querySelector('#b-nej').value.trim(), nm = sub.querySelector('#b-nmonto').value;
-          if (nej) await repo.guardarBase(nej, anio, mes, nm, perfil);
-          alert('✅ Bases guardadas.'); sub.remove(); cargarAdmin();
-        }catch(e){ const er=sub.querySelector('#b-e'); er.textContent=e.message; er.style.display='block'; }
-      });
+  async function ajustes(cont) {
+    const cfg = await repo.fetchConfig();
+    cont.innerHTML = `<div class="fcard"><div class="fn">Ajustes de compensación</div>
+      <label class="alab">Meta = % de la cartera base</label><input class="inp" id="cf-meta" type="number" step="0.5" value="${cfg.pctMeta}">
+      <div class="p-cl" style="margin:10px 0 6px">Escalones (desde % → comisión %)</div>
+      ${cfg.escalones.map((e,i)=>`<div class="comp-cf">
+        <span class="mt">desde</span><input class="inp cf-d" data-i="${i}" type="number" value="${e.desde}" style="width:64px">
+        <span class="mt">\u2192</span><input class="inp cf-p" data-i="${i}" type="number" step="0.5" value="${e.pct}" style="width:64px"><span class="mt">% com</span>
+        <label class="mt" style="display:flex;align-items:center;gap:4px"><input type="checkbox" class="cf-a" data-i="${i}" ${e.apertura?'checked':''}>apertura</label>
+      </div>`).join('')}
+      <button class="btn-primary" id="cf-go" style="margin-top:10px">Guardar ajustes</button>
+      ${perfil.rol==='ADMIN'?`<button class="p-sec" id="cf-corte" style="width:100%;margin-top:8px">Correr corte mensual (congela bases)</button>`:''}
+    </div>`;
+    cont.querySelector('#cf-go').addEventListener('click', async ()=>{
+      const nc = JSON.parse(JSON.stringify(cfg));
+      nc.pctMeta = parseFloat(cont.querySelector('#cf-meta').value)||10;
+      cont.querySelectorAll('.cf-d').forEach(el=>nc.escalones[+el.dataset.i].desde=parseFloat(el.value)||0);
+      cont.querySelectorAll('.cf-p').forEach(el=>nc.escalones[+el.dataset.i].pct=parseFloat(el.value)||0);
+      cont.querySelectorAll('.cf-a').forEach(el=>nc.escalones[+el.dataset.i].apertura=el.checked);
+      try { await repo.guardarConfig(nc, perfil); alert('Ajustes guardados.'); } catch(e){ alert(e.message); }
     });
+    const corte = cont.querySelector('#cf-corte');
+    if (corte) corte.addEventListener('click', async ()=>{ if(!confirm('¿Correr el corte mensual? Congela la cartera actual como base del próximo mes.'))return; try{ const r=await repo.correrCorte(perfil); alert(r.msg); }catch(e){ alert(e.message); } });
   }
 
-  function wireSelector(reload) {
-    c.querySelector('#cm-mes').addEventListener('change', e=>{ mes=parseInt(e.target.value); reload(); });
-    c.querySelector('#cm-anio').addEventListener('change', e=>{ anio=parseInt(e.target.value); reload(); });
-  }
-
-  if (esEjec) {
-    if (!perfil.ejecutivo) { c.innerHTML = '<div class="note">Tu usuario no tiene cartera de ejecutivo asignada.</div>'; return; }
-    cargarEjec();
-  } else cargarAdmin();
+  recargar();
 }

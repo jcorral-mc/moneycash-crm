@@ -22,6 +22,8 @@ import { abrirReactivaciones } from './reactivaciones.view.js';
 import { abrirDesglose } from './desglose.view.js';
 import { abrirTuberia } from './tuberia.view.js';
 import { abrirAplicarPago } from './pago.view.js';
+import { abrirMisSolicitudes } from './mis_solicitudes.view.js';
+import { abrirPagoAmericano } from './pago_americano.view.js';
 
 // Íconos SVG de línea por módulo (estilo del CRM nuevo, sin emojis)
 const I = {
@@ -44,6 +46,8 @@ const I = {
   compen:'<circle cx="12" cy="8" r="6"/><path d="M15.5 13.6 17 22l-5-3-5 3 1.5-8.4"/>',
   autoriz:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',
   export:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
+  missol:'<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>',
+  americano:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/>',
 };
 const svg = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${I[k]||''}</svg>`;
 
@@ -113,6 +117,7 @@ export async function renderDashboard(perfil) {
     { id:'g1', t:'Cobranza', items:[
       { k:'cartera', t:'Cartera', show:true },
       { k:'pago', t:'Aplicar pago', show:['ADMIN','GERENTE','EJECUTIVO'].includes(rol) },
+      { k:'americano', t:'Pago americano', show:['ADMIN','GERENTE','EJECUTIVO'].includes(rol) },
       { k:'cobranza', t:'Cobranza', show:true },
       { k:'conc', t:'Conciliación', show:puedeConciliar, badge:pendConc },
       { k:'reactiv', t:'Reactivaciones', show:true },
@@ -130,6 +135,7 @@ export async function renderDashboard(perfil) {
       { k:'tuberia', t:'Tubería', show:veTuberia },
       { k:'juridico', t:'Jurídico', show:veJuridico },
       { k:'visitas', t:'Visitas', show:veVisitas },
+      { k:'missol', t:'Mis solicitudes', show:['EJECUTIVO','GERENTE'].includes(rol) },
       { k:'autoriz', t:'Autorizaciones', show:veSolic, badge:nSol },
     ]},
     { id:'g4', t:'Admin', items:[
@@ -177,6 +183,8 @@ export async function renderDashboard(perfil) {
   const on = (k, fn) => { const b=root.querySelector('#m-'+k); if (b) b.addEventListener('click', fn); };
   on('cartera', ()=>abrirClientes(perfil));
   on('pago', ()=>abrirAplicarPago('', perfil, ()=>reload(perfil)));
+  on('americano', ()=>abrirPagoAmericano('', perfil, ()=>reload(perfil)));
+  on('missol', ()=>abrirMisSolicitudes(perfil));
   on('cobranza', ()=>abrirCobranza(perfil));
   on('conc', ()=>abrirConciliacion(perfil, ()=>reload(perfil)));
   on('reactiv', ()=>abrirReactivaciones(perfil));
