@@ -18,6 +18,11 @@ export async function ejecutarPlan(plan, carteraId, pendienteId, por) {
   for (const u of plan.calUpdates) {
     const patch = { pagado: u.pagado };
     if (u.estatus) patch.estatus = u.estatus;
+    // Campos recalculados (solo americano los manda; el flujo normal no, así que no se tocan).
+    if (u.monto_puntual != null) patch.monto_puntual = u.monto_puntual;
+    if (u.monto_impuntual != null) patch.monto_impuntual = u.monto_impuntual;
+    if (u.capital != null) patch.capital = u.capital;
+    if (u.interes != null) patch.interes = u.interes;
     const { error } = await db.from('calendarios').update(patch).eq('id', u.id);
     if (error) throw error;
   }

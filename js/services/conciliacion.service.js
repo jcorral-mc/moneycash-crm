@@ -5,7 +5,7 @@ const U = s => String(s||'').toUpperCase();
 
 export function planAplicarPago(carteraRow, calRows, p) {
   const tipo = U(p.tipo);
-  if (/^AM_|AMERICANO/.test(tipo)) throw new Error('Crédito americano: se aplica en su módulo (Pago Americano).');
+  if (/^AM_|AMERICANO/.test(tipo)) return aplicarAmericano(carteraRow, calRows, p);
   if (/JURIDICO/.test(tipo)) throw new Error('Abono jurídico: se aplica en el módulo Jurídico.');
   if (tipo === 'COMBO') throw new Error('Combinación de pagos: se aplica en su módulo.');
 
@@ -87,5 +87,107 @@ export function planAplicarPago(carteraRow, calRows, p) {
   if (abonoNormal>0) { plan.bancoIngreso += abonoNormal; plan.desglose.push({ pago:abonoNormal, capital:Number(p.capital)||0, interes:Number(p.interes)||0, tipo:tipo }); }
   if (multa>0) { plan.bancoIngreso += multa; plan.desglose.push({ pago:multa, capital:0, interes:multa, tipo:'MULTA' }); }
   plan.detalle = tipo==='PARCIAL' ? `Parcial $${abonoNormal}.` : `Abono $${abonoNormal}.` + (multa>0?` Multa $${multa}.`:'');
+  return plan;
+}
+
+/** Aplica un pago AMERICANO (AM_*) — equivalente a _aplicarAmericano/_recalcularAmericano del Script.
+ *  Respeta la TASA PACTADA congelada (cartera.tasa). Devuelve un plan para ejecutarPlan.
+ *  Toca: CALENDARIOS (estatus + recálculo de interés futuro), CARTERA (saldo/saldo_capital/saldo_interes),
+ *  BANCOS (un ingreso por el monto recibido) y DESGLOSE (capital/interés/multa por separado). */
+export function aplicarAmericano(carteraRow, calRows, p) {
+  const r0 = n => Math.round(Number(n) || 0);
+  const opcion = U(p.tipo).replace(/^AM_/, '').split(/[#@|]/)[0];   // INTERES|CAPITAL|AMBOS|LIQUIDAR|FINAL
+  const cal = (calRows || []).slice().sort((a, b) => (a.n_pago || 0) - (b.n_pago || 0));
+  let tasa = Number(carteraRow.tasa) || 0; if (tasa > 1) tasa /= 100;  // tasa pactada (decimal)
+  const capActual = r0(carteraRow.saldo_capital ?? carteraRow.capital ?? carteraRow.saldo);
+  const interesPag = r0(p.interes);
+  const abonoCap = (opcion === 'CAPITAL' || opcion === 'AMBOS') ? r0(p.capital) : 0;
+  const multa = r0(p.multa), monto = r0(p.monto);
+  const ultimoN = cal.length ? cal[cal.length - 1].n_pago : 0;
+
+  const plan = {
+    calUpdates: [], calInserts: [], desglose: [], bancoIngreso: 0,
+    cuenta: p.cuenta, cliente: p.cliente, ejecutivo: p.ejecutivo,
+    saldo: Number(carteraRow.saldo) || 0, saldo_capital: null, saldo_interes: null, detalle: '',
+  };
+
+  const prox = cal.find(x => x.n_pago === Number(p.n_pago)) || cal.find(x => U(x.estatus).indexOf('PAGADO') < 0);
+  const paidIds = new Set();
+  const marcarPagado = (row, etiqueta) => {
+    if (!row) return;
+    plan.calUpdates.push({ id: row.id, pagado: Number(row.monto_puntual) || 0, estatus: etiqueta || 'PAGADO' });
+    paidIds.add(row.id);
+  };
+  // Recotiza el interés de los periodos pendientes con el nuevo capital (tasa pactada congelada).
+  const recalcFuturos = (capNuevo, desdeN) => {
+    const intReg = r0(capNuevo * tasa), impReg = r0(capNuevo * (tasa + 0.05));
+    for (const x of cal) {
+      if (paidIds.has(x.id) || U(x.estatus).indexOf('PAGADO') >= 0) continue;
+      if (desdeN != null && x.n_pago <= desdeN) continue;
+      const esUlt = x.n_pago === ultimoN;
+      plan.calUpdates.push({
+        id: x.id, pagado: Number(x.pagado) || 0,
+        monto_puntual: esUlt ? intReg + capNuevo : intReg,
+        monto_impuntual: esUlt ? impReg + capNuevo : impReg,
+        capital: esUlt ? capNuevo : 0, interes: intReg,
+      });
+    }
+  };
+  // Suma del interés que QUEDA pendiente tras la operación (para recomponer saldo_interes).
+  const sumaIntPendiente = (capNuevo, desdeN) => {
+    const intReg = r0(capNuevo * tasa); let s = 0;
+    for (const x of cal) {
+      if (paidIds.has(x.id) || U(x.estatus).indexOf('PAGADO') >= 0) continue;
+      if (desdeN != null && x.n_pago <= desdeN) continue;
+      s += intReg;
+    }
+    return s;
+  };
+
+  if (opcion === 'INTERES') {
+    marcarPagado(prox);
+    plan.bancoIngreso = monto;                                  // interés (+ multa si impuntual)
+    plan.desglose.push({ pago: interesPag, capital: 0, interes: interesPag, tipo: 'AM_INTERES' });
+    if (multa > 0) plan.desglose.push({ pago: multa, capital: 0, interes: multa, tipo: 'MULTA' });
+    const si = sumaIntPendiente(capActual);                     // capital sin cambio
+    plan.saldo_capital = capActual; plan.saldo_interes = si; plan.saldo = capActual + si;
+    plan.detalle = `Americano: interés $${interesPag}${multa > 0 ? (' + multa $' + multa) : ''} (pago #${prox ? prox.n_pago : ''}).`;
+    return plan;
+  }
+
+  if (opcion === 'CAPITAL') {
+    const capNuevo = Math.max(0, capActual - abonoCap);
+    recalcFuturos(capNuevo, null);                              // recotiza TODOS los pendientes
+    plan.bancoIngreso = abonoCap;                               // entra dinero, NO es ingreso de P&L
+    plan.desglose.push({ pago: abonoCap, capital: abonoCap, interes: 0, tipo: 'AM_CAPITAL' });
+    const si = sumaIntPendiente(capNuevo, null);
+    plan.saldo_capital = capNuevo; plan.saldo_interes = si; plan.saldo = capNuevo + si;
+    plan.detalle = `Americano: abono a capital $${abonoCap}. Capital ${capActual}→${capNuevo}; interés futuro recalculado.`;
+    return plan;
+  }
+
+  if (opcion === 'AMBOS') {
+    marcarPagado(prox);                                         // cobra interés del periodo
+    const capNuevo = Math.max(0, capActual - abonoCap);
+    recalcFuturos(capNuevo, prox ? prox.n_pago : null);         // recotiza periodos siguientes
+    plan.bancoIngreso = monto;                                  // interés + capital (+ multa)
+    plan.desglose.push({ pago: interesPag, capital: 0, interes: interesPag, tipo: 'AM_INTERES' });
+    plan.desglose.push({ pago: abonoCap, capital: abonoCap, interes: 0, tipo: 'AM_CAPITAL' });
+    if (multa > 0) plan.desglose.push({ pago: multa, capital: 0, interes: multa, tipo: 'MULTA' });
+    const si = sumaIntPendiente(capNuevo, prox ? prox.n_pago : null);
+    plan.saldo_capital = capNuevo; plan.saldo_interes = si; plan.saldo = capNuevo + si;
+    plan.detalle = `Americano: interés $${interesPag} + capital $${abonoCap}. Capital ${capActual}→${capNuevo}.`;
+    return plan;
+  }
+
+  // LIQUIDAR / FINAL → salda todo el crédito
+  cal.forEach(x => { if (U(x.estatus).indexOf('PAGADO') < 0) marcarPagado(x); });
+  const capLiq = capActual;
+  const intLiq = Math.max(0, monto - capLiq - multa);
+  plan.bancoIngreso = monto;
+  plan.desglose.push({ pago: capLiq + intLiq, capital: capLiq, interes: intLiq, tipo: 'LIQUIDACION' });
+  if (multa > 0) plan.desglose.push({ pago: multa, capital: 0, interes: multa, tipo: 'MULTA' });
+  plan.saldo = 0; plan.saldo_capital = 0; plan.saldo_interes = 0;
+  plan.detalle = `Americano ${opcion === 'FINAL' ? 'pago final' : 'liquidación'}: capital $${capLiq} + interés $${intLiq}. Saldo a cero.`;
   return plan;
 }
