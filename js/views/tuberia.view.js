@@ -11,7 +11,6 @@ import { PREGUNTAS, calcularScore, clasificar } from '../services/evaluacion.ser
 import { calcularSurtimiento } from '../services/surtir.service.js';
 import { candidatosReno } from '../services/reno.service.js';
 import { avisoPorEtapa, linkWhatsApp } from '../services/notificaciones.service.js';
-import { agregarDashboard, filtrarPorMes, aniosDisponibles } from '../services/dashboard_tuberia.service.js';
 import * as repo from '../repositories/tuberia.repo.js';
 import * as reno from '../repositories/reno.repo.js';
 import { fetchBancos } from '../repositories/bancos.repo.js';
@@ -29,7 +28,6 @@ const DOCS_REQ = [
 ];
 
 export async function abrirTuberia(perfil) {
-  const esGerencia = ['ADMIN','GERENTE'].includes(perfil.rol);
   const ov = el(`<div class="overlay"><div class="ohead"><button class="back">←</button><div class="ot">Tubería</div></div><div class="ocontent"></div></div>`);
   document.body.appendChild(ov);
   const root = ov.querySelector('.ocontent');
@@ -40,7 +38,7 @@ export async function abrirTuberia(perfil) {
   const FILTROS = { busca:'', ejecutivo:'', sucursal:'', tipo:'', fecha:'', desde:'', hasta:'' };
   let soloMios = perfil.rol==='EJECUTIVO';
 
-  const TABS = [['PIPE','Pipeline'],['DASH','Dashboard'],...(esGerencia?[['SOL','Solicitudes']]:[]),['COTIZA','Cotizador']];
+  const TABS = [['PIPE','Pipeline'],['COTIZA','Cotizador']];
 
   function render() {
     root.innerHTML = `
@@ -49,8 +47,6 @@ export async function abrirTuberia(perfil) {
       </div><div id="tb-body"></div>`;
     root.querySelectorAll('.tb-tab').forEach(b=>b.addEventListener('click',()=>{ TAB=b.dataset.t; render(); }));
     if (TAB==='PIPE') renderPipeline();
-    else if (TAB==='DASH') renderDashboard();
-    else if (TAB==='SOL') renderSolicitudes();
     else renderCotizador();
   }
 
@@ -444,61 +440,6 @@ export async function abrirTuberia(perfil) {
     });
   }
 
-  // ═══════════════════════ DASHBOARD OPERATIVO ═══════════════════════
-  async function renderDashboard() {
-    const body = root.querySelector('#tb-body');
-    body.innerHTML = '<div class="loader">Cargando dashboard…</div>';
-    await cargarProspectos();
-    const base = visibles(PROSPECTOS);
-    const hoy = new Date();
-    let mes = hoy.getMonth()+1, anio = hoy.getFullYear();
-    const anios = aniosDisponibles(base); if (anios.length && !anios.includes(anio)) anio = anios[anios.length-1];
-    const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-
-    body.innerHTML = `
-      <div class="tb-filtros">
-        <div class="tb-frow">
-          <select class="inp" id="d-mes">${MESES.map((m,i)=>`<option value="${i+1}" ${i+1===mes?'selected':''}>${m}</option>`).join('')}</select>
-          <select class="inp" id="d-anio">${(anios.length?anios:[anio]).map(a=>`<option ${a===anio?'selected':''}>${a}</option>`).join('')}</select>
-        </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn-primary" id="d-aplica" style="margin:0;flex:1">Aplicar filtro</button>
-          <button class="tb-mini" id="d-todo">Histórico total</button>
-        </div>
-      </div>
-      <div id="d-tablas"></div>`;
-    const pinta=(m,a)=>{
-      const lista = (m&&a) ? filtrarPorMes(base, m, a) : base;
-      const d = agregarDashboard(lista);
-      const cell=(v)=>money(v);
-      const cont = body.querySelector('#d-tablas');
-      cont.innerHTML = `
-        <div class="dash-sec"><div class="dash-tit">Tubería por sucursal</div>
-          <div class="dash-wrap"><table class="dash-tbl">
-            <thead><tr><th>Sucursal</th><th>Surtido</th><th>Por surtir</th><th>Visita</th><th>Proceso</th><th>Rechazado</th><th>Total</th></tr></thead>
-            <tbody>${d.tuberia.length?d.tuberia.map(r=>`<tr><td class="dl">${r.sucursal}</td><td style="color:var(--green)">${cell(r.surtido)}</td><td style="color:var(--amber)">${cell(r.porSurtir)}</td><td style="color:var(--steel)">${cell(r.visita)}</td><td>${cell(r.proceso)}</td><td style="color:var(--red)">${cell(r.rechazado)}</td><td class="dl">${cell(r.total)}</td></tr>`).join(''):'<tr><td colspan="7" class="dempty">Sin datos</td></tr>'}</tbody>
-          </table></div></div>
-        <div class="dash-sec"><div class="dash-tit">Desglose surtido</div>
-          <div class="dash-wrap"><table class="dash-tbl">
-            <thead><tr><th>Sucursal</th><th>Nuevos</th><th>React.</th><th>Renov.</th></tr></thead>
-            <tbody>${d.desglose.length?d.desglose.map(r=>`<tr><td class="dl">${r.sucursal}</td><td style="color:var(--green)">${cell(r.nuevos)}</td><td>${cell(r.reactivacion)}</td><td style="color:var(--amber)">${cell(r.renovacion)}</td></tr>`).join(''):'<tr><td colspan="4" class="dempty">Sin datos</td></tr>'}</tbody>
-          </table></div></div>
-        <div class="dash-sec"><div class="dash-tit">Intereses por sucursal</div>
-          <div class="dash-wrap"><table class="dash-tbl">
-            <thead><tr><th>Sucursal</th><th>Interés generado</th><th>Tasa prom.</th></tr></thead>
-            <tbody>${d.intereses.length?d.intereses.map(r=>`<tr><td class="dl">${r.sucursal}</td><td style="color:var(--steel)">${cell(r.montoIntereses)}</td><td>${(r.tasaPromedio||0).toFixed(1)}%</td></tr>`).join(''):'<tr><td colspan="3" class="dempty">Sin datos</td></tr>'}</tbody>
-          </table></div></div>
-        <div class="dash-sec"><div class="dash-tit">Ventas por ejecutivo</div>
-          <div class="dash-wrap"><table class="dash-tbl">
-            <thead><tr><th>Ejecutivo</th><th>Surtido</th><th>Nuevos</th><th>Renov.</th><th>Comisión</th></tr></thead>
-            <tbody>${d.ejecutivos.length?d.ejecutivos.map(r=>`<tr><td class="dl">${r.ejecutivo}</td><td style="color:var(--green)">${cell(r.surtido)}</td><td>${cell(r.nuevos)}</td><td style="color:var(--amber)">${cell(r.renovacion)}</td><td style="color:var(--green)">${cell(r.comision)}</td></tr>`).join(''):'<tr><td colspan="5" class="dempty">Sin datos</td></tr>'}</tbody>
-          </table></div></div>`;
-    };
-    body.querySelector('#d-aplica').addEventListener('click',()=>{ mes=parseInt(body.querySelector('#d-mes').value); anio=parseInt(body.querySelector('#d-anio').value); pinta(mes,anio); });
-    body.querySelector('#d-todo').addEventListener('click',()=>pinta(0,0));
-    pinta(mes,anio);
-  }
-
   // ═══════════════════════ COTIZADOR (en vivo) ═══════════════════════
   function renderCotizador() {
     const body = root.querySelector('#tb-body');
@@ -604,7 +545,7 @@ export async function abrirTuberia(perfil) {
       const ejec = (f.querySelector('#p-ejec').value||'').trim();
       if (!ejec){ return err(f,'Selecciona el ejecutivo.'); }
       try { const d = { tipo, cliente:cliente.nombre, ejecutivo:ejec, saldo:cliente.saldo, capital:cliente.capital };
-        const r = await reno.crearSolicitudReno(d, cot, perfil); alert(r.msg); TAB='SOL'; render(); }
+        const r = await reno.crearSolicitudReno(d, cot, perfil); alert(r.msg); TAB='PIPE'; render(); }
       catch(e){ err(f, e.message); }
     }
     async function crearNuevo() {
@@ -615,27 +556,6 @@ export async function abrirTuberia(perfil) {
       try { const r=await repo.crearProspecto(d, cot, perfil); alert(r.msg); PROSPECTOS=null; TAB='PIPE'; render(); } catch(e){ err($('#p-form'), e.message); }
     }
     function err(scope, msg){ const e=scope.querySelector('#p-err'); if(e){ e.innerHTML=`<div class="note" style="border-color:var(--red);color:var(--red);margin-top:8px">${msg}</div>`; } else alert(msg); }
-  }
-
-  // ═══════════════════════ SOLICITUDES (gerente) ═══════════════════════
-  async function renderSolicitudes() {
-    const body = root.querySelector('#tb-body');
-    body.innerHTML = '<div class="loader">Cargando…</div>';
-    const sols = await reno.fetchSolicitudesReno('PENDIENTE');
-    body.innerHTML = sols.length ? sols.map(s=>`
-      <div class="fcard" style="margin-bottom:10px" data-id="${s.id}">
-        <div class="liqrow"><span><b>${s.cliente}</b></span><b>${s.tipo}</b></div>
-        <div class="liqrow"><span>Ejecutivo</span><b>${s.ejecutivo||'—'}</b></div>
-        <div class="liqrow"><span>Saldo actual</span><b class="num">${money(s.saldo_actual)}</b></div>
-        <div class="liqrow"><span>Monto nuevo</span><b class="num">${money(s.monto_nuevo)} · ${s.plazo} ${String(s.frecuencia||'').toLowerCase()}</b></div>
-        <div class="liqrow hl"><span>Abono</span><b class="num">${money(s.abono_puntual)}</b></div>
-        <div style="display:flex;gap:8px;margin-top:8px"><button class="btn-primary s-ap" style="flex:1;background:var(--green);margin:0">Autorizar</button><button class="btn-primary s-rj" style="flex:1;background:var(--red);margin:0">Rechazar</button></div>
-      </div>`).join('') : '<div class="note">No hay solicitudes pendientes.</div>';
-    sols.forEach(s=>{
-      const card=body.querySelector(`[data-id="${s.id}"]`); if(!card) return;
-      card.querySelector('.s-ap').addEventListener('click', async ()=>{ if(!confirm('¿Autorizar '+s.tipo.toLowerCase()+' de '+s.cliente+'? Entrará a Tubería como "Listo para Surtir".')) return; try{ const r=await reno.aprobarSolicitudReno(s,perfil); PROSPECTOS=null; alert(r.msg); renderSolicitudes(); }catch(e){ alert('❌ '+e.message); } });
-      card.querySelector('.s-rj').addEventListener('click', async ()=>{ const m=prompt('Motivo:'); if(m===null) return; try{ const r=await reno.rechazarSolicitudReno(s,m,perfil); alert(r.msg); renderSolicitudes(); }catch(e){ alert('❌ '+e.message); } });
-    });
   }
 
   render();

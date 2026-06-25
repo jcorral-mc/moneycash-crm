@@ -439,3 +439,20 @@ svg{display:block}
 .ft-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:10px}
 .ft-thumb{display:block;border-radius:10px;overflow:hidden;border:1px solid var(--line);aspect-ratio:1/1;background:var(--bg)}
 .ft-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* Balance del mes */
+.bal-hero{background:var(--navy);color:#fff;border-radius:16px;padding:16px 18px;margin-bottom:14px}
+.bal-hero-lab{font-size:.78em;color:#cfe0ef}
+.bal-hero-val{font-size:1.9em;font-weight:800;margin:2px 0 10px}
+.bal-hero-row{display:flex;gap:8px}
+.bal-hero-box{flex:1;background:rgba(255,255,255,.10);border-radius:10px;padding:8px 10px;font-weight:700}
+.bal-hero-blab{font-size:.64em;color:#cfe0ef;font-weight:600}
+.bal-grp{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:8px}
+.bal-hd{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer}
+.bal-tt{font-size:.9em;font-weight:600;color:var(--ink)}
+.bal-sub{font-size:.72em;color:var(--slate)}
+.bal-chev{color:var(--slate);transition:transform .15s}
+.bal-body{border-top:1px solid var(--line);padding:4px 14px 8px;display:none}
+.bal-it{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:.82em;border-bottom:1px solid var(--bg)}
+.bal-it:last-child{border-bottom:none}
+.sec-h .num{margin-left:auto;font-size:.86em}

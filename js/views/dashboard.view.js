@@ -26,6 +26,9 @@ import { abrirTuberia } from './tuberia.view.js';
 import { abrirAplicarPago } from './pago.view.js';
 import { abrirMisSolicitudes } from './mis_solicitudes.view.js';
 import { abrirPagoAmericano } from './pago_americano.view.js';
+import { abrirMisTuberia } from './mistuberia.view.js';
+import { abrirBalance } from './balance.view.js';
+import { abrirAvisos } from './avisos.view.js';
 
 // Íconos SVG de línea por módulo (estilo del CRM nuevo, sin emojis)
 const I = {
@@ -52,6 +55,9 @@ const I = {
   americano:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/>',
   reno:'<path d="M3 2v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/>',
   agenda:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  mistuberia:'<path d="M3 4h18l-7 8v6l-4 2v-8L3 4z"/>',
+  balance:'<path d="M12 3v18"/><path d="M5 7h14"/><path d="m5 7-3 6a3.5 3.5 0 0 0 6 0L5 7z"/><path d="m19 7-3 6a3.5 3.5 0 0 0 6 0l-3-6z"/>',
+  avisos:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
 };
 const svg = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${I[k]||''}</svg>`;
 
@@ -133,10 +139,12 @@ export async function renderDashboard(perfil) {
       { k:'desglose', t:'Desglose', show:true },
       { k:'acre', t:'Acreedores', show:finanzas },
       { k:'cuentas', t:'Cuentas', show:finanzas },
-      { k:'finanzas', t:'Balance', show:['ADMIN','GERENTE'].includes(rol) },
+      { k:'balance', t:'Balance del mes', show:['ADMIN','GERENTE','AUX_ADMIN'].includes(rol) },
+      { k:'finanzas', t:'Estado resultados', show:['ADMIN','GERENTE'].includes(rol) },
     ]},
     { id:'g3', t:'Gestión', items:[
       { k:'tuberia', t:'Tubería', show:veTuberia },
+      { k:'mistuberia', t:'Mi Tubería', show:['ADMIN','GERENTE','EJECUTIVO'].includes(rol) },
       { k:'juridico', t:'Jurídico', show:veJuridico },
       { k:'visitas', t:'Visitas', show:veVisitas },
       { k:'missol', t:'Mis solicitudes', show:['EJECUTIVO','GERENTE'].includes(rol) },
@@ -146,6 +154,7 @@ export async function renderDashboard(perfil) {
     ]},
     { id:'g4', t:'Admin', items:[
       { k:'equipo', t:'Equipo', show:rol==='ADMIN' },
+      { k:'avisos', t:'Avisos', show:rol==='ADMIN' },
       { k:'compen', t:'Compensaciones', show:['ADMIN','GERENTE'].includes(rol) },
       { k:'export', t:'Exportar', show:adminAux },
     ]},
@@ -204,6 +213,9 @@ export async function renderDashboard(perfil) {
   on('cuentas', ()=>abrirCuentas(perfil));
   on('finanzas', ()=>abrirFinanzas(perfil));
   on('tuberia', ()=>abrirTuberia(perfil));
+  on('mistuberia', ()=>abrirMisTuberia(perfil));
+  on('balance', ()=>abrirBalance(perfil));
+  on('avisos', ()=>abrirAvisos(perfil));
   on('juridico', ()=>abrirJuridico(perfil));
   on('visitas', ()=>abrirVisitas(perfil));
   on('autoriz', ()=>abrirAutorizaciones(perfil, ()=>reload(perfil)));

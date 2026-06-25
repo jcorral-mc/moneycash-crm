@@ -5,6 +5,7 @@ import { el, money } from '../lib/dom.js';
 import { fetchCartera, fetchAllCalendarios } from '../repositories/clientes.repo.js';
 import { agruparCalendario } from '../services/clientes.service.js';
 import { construirCobranza, colorBucket, COB_ESTADOS, COB_SALIDAS, COB_SALIDA_LABEL } from '../services/cobranza.service.js';
+import { construirCxC } from '../services/cuentas.service.js';
 import { insertComentario, fetchGestionCliente, fetchHistorialVisitas, escalarRevision, fetchCasosRevision, resolverRevision } from '../repositories/cobranza.repo.js';
 import { asignarVisita } from '../repositories/visitas.repo.js';
 import { abrirFicha } from './clientes.view.js';
@@ -20,8 +21,21 @@ export async function renderCobranza(perfil) {
   ]);
   const calBy = agruparCalendario(cals);
   const { kpis, ejecutivos } = construirCobranza(cartera, calBy, perfil.rol, perfil.ejecutivo);
+  const cxc = construirCxC(cartera, calBy, perfil.rol, perfil.ejecutivo);
 
   function reload(){ renderCobranza(perfil).then(n => { const v = root.parentNode; if (v) v.replaceChild(n, root); }); }
+
+  const porCobrarHTML = `
+    <div class="sec-h"><span class="t">Por cobrar (cartera)</span><span class="ln"></span></div>
+    <div class="fcard">
+      <div class="liqrow"><span>Total por cobrar</span><b class="num">${money(cxc.total)}</b></div>
+      <div class="liqrow"><span>Vigente</span><b class="num">${money(cxc.vigente)}</b></div>
+      <div class="liqrow"><span>Al corriente</span><b class="num">${money(cxc.buckets['0'])}</b></div>
+      <div class="liqrow"><span>1–7 días</span><b class="num">${money(cxc.buckets['1-7'])}</b></div>
+      <div class="liqrow"><span>8–15 días</span><b class="num">${money(cxc.buckets['8-15'])}</b></div>
+      <div class="liqrow"><span>16–30 días</span><b class="num">${money(cxc.buckets['16-30'])}</b></div>
+      <div class="liqrow hl"><span>+30 días</span><b class="num" style="color:var(--red)">${money(cxc.buckets['+30'])}</b></div>
+    </div>`;
 
   const revisionHTML = (casos && casos.length) ? `
     <div class="sec-h"><span class="t">⚖️ En revisión con gerencia · ${casos.length}</span><span class="ln"></span></div>
@@ -37,6 +51,7 @@ export async function renderCobranza(perfil) {
       <div class="kcard"><div class="klab">En mora</div><div class="kval num" style="font-size:1.25em">${kpis.totalClientes}</div></div>
       <div class="kcard"><div class="klab">Crítico +45d</div><div class="kval num" style="font-size:1.25em;color:var(--red)">${money(kpis.critico45)}</div></div>
     </div>
+    ${porCobrarHTML}
     ${revisionHTML}
     ${ejecutivos.map(e => `
       <div class="sec-h"><span class="t">${e.ejecutivo} · ${money(e.totalVencido)} · ${e.nClientes}</span><span class="ln"></span></div>
