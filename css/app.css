@@ -167,3 +167,31 @@ svg{display:block}
 .dg-bank{font-size:.72em;color:var(--slate)}
 .dg-monto{font-size:.92em;font-weight:700}
 .dg-ci{font-size:.64em;color:var(--slate)}
+
+/* Aplicar Pago */
+.p-lista{background:var(--card);border:1px solid var(--line);border-radius:11px;max-height:280px;overflow-y:auto;margin-top:6px;margin-bottom:8px}
+.p-li{padding:11px 14px;cursor:pointer;font-size:.9em;border-bottom:1px solid var(--line)}
+.p-li:hover{background:var(--bg)}
+.p-banner{margin-top:10px;padding:10px 12px;border-radius:9px;font-size:.85em;line-height:1.35}
+.p-banner.azul{background:#e7f3fb;color:#0f5980}
+.p-banner.naranja{background:#fff0e6;color:#b9791c}
+.p-banner.verde{background:#e6f7ec;color:#1e7a52}
+.p-banner.morado{background:#f3e8fb;color:#9c2bad}
+.p-acum{font-size:.8em;font-weight:600;margin-top:6px;opacity:.92}
+.p-cont{display:flex;justify-content:space-between;margin-top:10px}
+.p-cont>div{text-align:center;flex:1}
+.p-cl{font-size:.62em;color:var(--slate);letter-spacing:.04em}
+.p-cv{font-weight:700;font-size:.92em;margin-top:2px}
+.p-ultimos{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:.76em;color:var(--slate)}
+.p-tipos{display:grid;gap:9px;margin-bottom:14px}
+.p-tp{display:flex;justify-content:space-between;align-items:center;padding:13px;border:2px solid var(--line);background:var(--card);color:var(--slate);border-radius:11px;font-weight:600;font-size:.88em;cursor:pointer;text-align:left}
+.p-tp b{font-weight:700}
+.p-tp.on{border-color:var(--steel);background:var(--steel);color:#fff}
+.p-fp{display:flex;gap:8px;margin-top:4px}
+.p-fpb{flex:1;padding:10px;border:2px solid var(--line);border-radius:9px;background:var(--card);text-align:center;cursor:pointer;font-size:.84em;font-weight:600;color:var(--slate)}
+.p-fpb.on{border-color:var(--steel);background:var(--steel);color:#fff}
+.p-sec{flex:1;padding:11px;border:2px solid var(--line);background:var(--card);border-radius:11px;font-weight:600;font-size:.82em;cursor:pointer;color:var(--slate)}
+.p-modal{position:fixed;inset:0;background:rgba(13,37,53,.5);z-index:90;display:flex;align-items:center;justify-content:center;padding:20px}
+.p-mbox{background:var(--card);border-radius:16px;padding:22px;max-width:360px;width:100%;display:flex;flex-direction:column}
+.p-mtit{font-weight:700;font-size:1.05em;margin:6px 0 8px}
+.p-mtxt{color:var(--ink2);font-size:.9em;margin-bottom:14px}

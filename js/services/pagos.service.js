@@ -33,41 +33,57 @@ function hayPerdonVigente() { return false; }
  * RÉPLICA de infoClientePago: montos sugeridos para la pantalla de pago.
  * Devuelve { sugerido, montoMinimo, liquidar50, liquidarCompleto, capPend, intPend, multaPago, esImpuntual, nPagoCobrar }.
  */
-export function infoPago(carteraRow, calRows, pendientesRows) {
+export function infoPago(carteraRow, calRows, pendientesRows, extra) {
+  extra = extra || {};
   const hoy = new Date(); hoy.setHours(0,0,0,0);
   const pf = v => v ? new Date(v) : null;
+  const fdate = d => d ? new Date(d).toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '';
   const pagos = (calRows||[]).slice().sort((a,b)=>(a.n_pago||0)-(b.n_pago||0));
   const yaReg = nPagosConPendiente(pendientesRows, carteraRow.nombre);
+  const perdonVigente = extra.perdonVigente === true;
+  const descuentoAutorizado = (extra.descuentoAutorizado != null) ? extra.descuentoAutorizado : null;
   const prox = proximoPagoPendiente(pagos, yaReg);
   if (prox && (Number(prox.monto_impuntual)||0) < (Number(prox.monto_puntual)||0)) prox.monto_impuntual = prox.monto_puntual;
 
-  // Capital / interés pendientes (suma de los pagos no pagados)
+  // Capital / interés pendientes
   let capPend=0, intPend=0;
   for (const p of pagos) { if (U(p.estatus).indexOf('PAGADO')<0) { capPend += Number(p.capital)||0; intPend += Number(p.interes)||0; } }
-  const liquidar50 = Math.round((capPend + intPend*0.5)*100)/100;   // capital + 50% interés (previa autorización)
-  const liquidarCompleto = Math.round(capPend + intPend);            // liquidación COMPLETA hoy (sin descuento)
+  const liquidar50 = Math.round((capPend + intPend*0.5)*100)/100;
+  const liquidarCompleto = Math.round(capPend + intPend);
   const pgInt = parseFloat(carteraRow.pg_int)||0;
   const montoMinimo = prox ? Math.round(Number(prox.interes)>0 ? Number(prox.interes) : pgInt) : 0;
 
-  // Sugerido = acumulado de pagos pendientes ya vencidos o que vencen hoy (fecha ≤ hoy)
-  let sugeridoAcum=0, multaAcum=0;
+  // Contadores (réplica infoClientePago)
+  let pagadosATiempo=0, pagadosTarde=0, pendientes=0, vencidos=0, multasAcum=0;
+  for (const p of pagos) {
+    const pagado = U(p.estatus).indexOf('PAGADO') >= 0;
+    const multa = Number(p.multa)||0;
+    if (pagado) { if (multa>0) pagadosTarde++; else pagadosATiempo++; multasAcum += multa; }
+    else { pendientes++; if (estaImpuntual(pf(p.fecha), hoy)) vencidos++; }
+  }
+
+  // Sugerido + desglose acumulado (pagos pendientes con fecha <= hoy)
+  let sugeridoAcum=0, multaAcum=0; const desglose=[];
   for (const pg of pagos) {
     if (U(pg.estatus).indexOf('PAGADO')>=0) continue;
     if (yaReg.has(pg.n_pago)) continue;
     const f = pf(pg.fecha); if (!f) continue;
     const fpg = new Date(f); fpg.setHours(0,0,0,0);
     if (fpg.getTime() > hoy.getTime()) continue;
-    const impPg = estaImpuntual(f, hoy) && !hayPerdonVigente();
+    const impPg = estaImpuntual(f, hoy) && !perdonVigente;
     let fullPg = impPg ? (Number(pg.monto_impuntual)||0) : (Number(pg.monto_puntual)||0);
     if (fullPg < (Number(pg.monto_puntual)||0)) fullPg = Number(pg.monto_puntual)||0;
     const faltaPg = Math.max(0, Math.round(fullPg - (Number(pg.pagado)||0)));
     if (faltaPg <= 0) continue;
-    sugeridoAcum += faltaPg;
-    if (impPg) multaAcum += Math.round((Number(pg.monto_impuntual)||0)-(Number(pg.monto_puntual)||0));
+    const mPg = impPg ? Math.round((Number(pg.monto_impuntual)||0)-(Number(pg.monto_puntual)||0)) : 0;
+    sugeridoAcum += faltaPg; multaAcum += mPg;
+    desglose.push({ nPago:pg.n_pago, fecha:fdate(f), tipo: impPg?'impuntual':((Number(pg.pagado)||0)>0?'remanente':'puntual'), monto:faltaPg, multa:mPg });
   }
+
   let sugerido=0, multaPago=0, esImpuntual=false, nPagoCobrar=0;
   if (prox) {
-    esImpuntual = estaImpuntual(pf(prox.fecha), hoy) && !hayPerdonVigente();
+    const seriaImp = estaImpuntual(pf(prox.fecha), hoy);
+    esImpuntual = seriaImp && !perdonVigente;
     const pagoCompleto = esImpuntual ? (Number(prox.monto_impuntual)||0) : (Number(prox.monto_puntual)||0);
     sugerido = Math.max(0, pagoCompleto - Math.round(Number(prox.pagado)||0));
     multaPago = esImpuntual ? ((Number(prox.monto_impuntual)||0)-(Number(prox.monto_puntual)||0)) : 0;
@@ -75,7 +91,15 @@ export function infoPago(carteraRow, calRows, pendientesRows) {
   }
   if (sugeridoAcum > 0) { sugerido = sugeridoAcum; multaPago = multaAcum; esImpuntual = (multaAcum>0); }
 
-  return { sugerido, montoMinimo, liquidar50, liquidarCompleto, capPend:Math.round(capPend), intPend:Math.round(intPend), multaPago, esImpuntual, nPagoCobrar };
+  const saldo = Number(carteraRow.saldo)||0;
+  return {
+    ok:true, saldo, abono: Number(carteraRow.abono)||0,
+    sugerido, montoACobrar: sugerido, montoMinimo, liquidar50, liquidarCompleto,
+    capPend:Math.round(capPend), intPend:Math.round(intPend),
+    multaPago, esImpuntual, nPagoCobrar, perdonVigente,
+    pagadosATiempo, pagadosTarde, pendientes, vencidos, multasAcum:Math.round(multasAcum),
+    descuentoAutorizado, desglose, ultimos: extra.ultimos || [],
+  };
 }
 
 /**
