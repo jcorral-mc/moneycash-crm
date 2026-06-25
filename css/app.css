@@ -350,3 +350,40 @@ svg{display:block}
 .comp-esc.aqui{background:#FBF6E6;font-weight:700;margin:0 -14px;padding:7px 14px}
 .comp-esc.cero{color:var(--slate)}
 .comp-cf{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+
+/* Renovaciones */
+.reno-card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--slate);border-radius:12px;padding:13px 15px;margin-bottom:10px}
+.reno-tag{font-size:.65em;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.reno-cli{font-weight:700;font-size:1em;margin:2px 0}
+.reno-meta{font-size:.74em;color:var(--slate)}
+.reno-line{font-size:.82em;margin-top:4px}
+.reno-fin{font-size:.74em;color:var(--ink2);margin-top:8px;padding:8px 10px;background:var(--bg);border-radius:8px;line-height:1.6}
+.reno-btns{display:flex;gap:8px;margin-top:12px}
+
+/* Agenda */
+.ag-prox{margin-bottom:8px}
+.ag-prox-h{font-weight:700;color:var(--red);margin-bottom:8px;font-size:.9em}
+.ag-card{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--slate);border-radius:10px;padding:10px 12px;margin-bottom:6px}
+.ag-meta{font-size:.72em;color:var(--slate);margin-top:4px}
+.ag-badge{font-size:.6em;font-weight:700;color:#fff;padding:2px 7px;border-radius:5px}
+.ag-filtros{display:flex;gap:8px;margin-bottom:10px}
+
+/* Reactivaciones (acordeón) */
+.re-grupo{margin-bottom:10px}
+.re-gh{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--navy);color:#fff;border-radius:11px;cursor:pointer}
+.re-fl{font-size:1.1em}
+.re-gb{margin-top:8px}
+
+/* Visitas — estudio de verificación + evidencias */
+.vf-ctx{background:#FAF6EC;border:1px solid #EAD9A8;color:var(--amber);font-size:.78em;padding:7px 9px;border-radius:8px;margin-bottom:10px;line-height:1.5}
+.vf-sech{font-size:.74em;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.02em;margin:12px 0 6px}
+.vf-chk{background:var(--bg);border-radius:9px;padding:10px;margin-bottom:8px}
+.vf-item{display:flex;align-items:center;gap:8px;font-size:.84em;margin:6px 0;cursor:pointer}
+.vf-item input{width:17px;height:17px;min-width:17px;accent-color:var(--steel)}
+.vf-foto{margin-bottom:8px}
+.vf-foto-t{font-size:.7em;font-weight:600;color:var(--navy);margin-bottom:3px}
+.vf-btn{flex:1;text-align:center;border-radius:7px;padding:9px;font-size:.76em;font-weight:600;cursor:pointer;border:1px solid var(--line)}
+.vf-btn.cam{background:#EAF1F8;color:var(--steel)}
+.vf-btn.gal{background:#F2EEDA;color:var(--amber)}
+.vf-lbl{font-size:.66em;color:var(--green);margin-top:3px;font-weight:600;min-height:.8em}
+.vf-div{border-top:1px dashed var(--line);margin:14px 0 10px}

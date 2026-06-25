@@ -52,6 +52,7 @@ export function construirLista(visitas, tipo) {
       refId:String(r.ref_id||''), telefono:String(r.telefono||''), direccion:String(r.direccion||''),
       referencias:String(r.referencias||''), horarios:String(r.horarios||''), aval:String(r.aval||''),
       asigna:String(r.asigna||''), comentarios:String(r.comentarios||''), dias,
+      titular_listo:!!r.titular_listo, avance_cli:String(r.avance_cli||''), avance_com_cli:String(r.avance_com_cli||''),
     });
   }
   out.sort((a,b)=> b.dias - a.dias);   // más viejas (urgentes) primero

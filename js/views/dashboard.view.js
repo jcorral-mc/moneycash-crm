@@ -19,6 +19,8 @@ import { abrirFinanzas } from './finanzas.view.js';
 import { abrirCuentas } from './cuentas.view.js';
 import { abrirCompensaciones } from './compensaciones.view.js';
 import { abrirReactivaciones } from './reactivaciones.view.js';
+import { abrirReno } from './reno.view.js';
+import { abrirAgenda } from './agenda.view.js';
 import { abrirDesglose } from './desglose.view.js';
 import { abrirTuberia } from './tuberia.view.js';
 import { abrirAplicarPago } from './pago.view.js';
@@ -48,6 +50,8 @@ const I = {
   export:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
   missol:'<path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/>',
   americano:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M6 15h4"/>',
+  reno:'<path d="M3 2v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/>',
+  agenda:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
 };
 const svg = k => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${I[k]||''}</svg>`;
 
@@ -136,6 +140,8 @@ export async function renderDashboard(perfil) {
       { k:'juridico', t:'Jurídico', show:veJuridico },
       { k:'visitas', t:'Visitas', show:veVisitas },
       { k:'missol', t:'Mis solicitudes', show:['EJECUTIVO','GERENTE'].includes(rol) },
+      { k:'reno', t:'Renovaciones', show:['ADMIN','GERENTE'].includes(rol) },
+      { k:'agenda', t:'Agenda', show:true },
       { k:'autoriz', t:'Autorizaciones', show:veSolic, badge:nSol },
     ]},
     { id:'g4', t:'Admin', items:[
@@ -188,6 +194,8 @@ export async function renderDashboard(perfil) {
   on('cobranza', ()=>abrirCobranza(perfil));
   on('conc', ()=>abrirConciliacion(perfil, ()=>reload(perfil)));
   on('reactiv', ()=>abrirReactivaciones(perfil));
+  on('reno', ()=>abrirReno(perfil, ()=>reload(perfil)));
+  on('agenda', ()=>abrirAgenda(perfil));
   on('comision', ()=>abrirCompensaciones(perfil));
   on('bancos', ()=>abrirBancos(perfil));
   on('movs', ()=>abrirMovimientos(perfil));
