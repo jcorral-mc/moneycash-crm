@@ -82,6 +82,39 @@ export async function agregarNota(prospecto, texto, perfil) {
   return { ok: true, notas: nuevas };
 }
 
+/** Dispara una visita de VERIFICACIÓN a la cola del módulo Visitas (estatus PENDIENTE).
+ *  Réplica de _crmCrearVerificacion del Script. Escribe directo a `visitas` para no
+ *  pasar por el candado de rol de asignarVisita (es una acción automática del pipeline). */
+export async function dispararVisitaVerificacion(prospecto, datos, perfil) {
+  const fila = {
+    fecha: hoy(),
+    tipo: 'VERIFICACION',
+    cliente: String(prospecto.nombre || '').trim(),
+    ref_id: String(prospecto.prospect_id || prospecto.id || ''),
+    telefono: String((datos && datos.telefono) || prospecto.telefono || ''),
+    direccion: String((datos && datos.direccion) || ''),
+    aval: String((datos && datos.aval) || ''),
+    horarios: String((datos && datos.horarios) || ''),
+    comentarios: String((datos && datos.nota) || ''),
+    asigna: (perfil && perfil.email) || '',
+    estatus: 'PENDIENTE',
+  };
+  const { error } = await db.from('visitas').insert(fila);
+  if (error) throw error;
+  await logAudit(perfil, 'TUB_VISITA_VERIFICACION', fila.cliente, 'visita domiciliaria → cola de verificación');
+  return { ok: true, msg: '✅ Visita de verificación enviada a la cola de Visitas.' };
+}
+
+/** Guarda/acumula URLs de fotos (evidencias) en cotizacion_json.fotos. */
+export async function guardarFotos(prospecto, urls, perfil) {
+  const cot = prospecto.cotizacion_json || {};
+  cot.fotos = [...(cot.fotos || []), ...(urls || [])];
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  prospecto.cotizacion_json = cot;
+  await logAudit(perfil, 'TUB_FOTOS', prospecto.nombre, (urls || []).length + ' foto(s)');
+  return { ok: true, fotos: cot.fotos };
+}
+
 export async function cambiarStatus(prospecto, nuevoStatus, perfil) {
   await db.from('prospectos').update({ status:nuevoStatus }).eq('id', prospecto.id);
   await logAudit(perfil, 'TUB_STATUS', prospecto.nombre, nuevoStatus);

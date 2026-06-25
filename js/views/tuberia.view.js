@@ -15,6 +15,7 @@ import { agregarDashboard, filtrarPorMes, aniosDisponibles } from '../services/d
 import * as repo from '../repositories/tuberia.repo.js';
 import * as reno from '../repositories/reno.repo.js';
 import { fetchBancos } from '../repositories/bancos.repo.js';
+import { subirFotos } from '../lib/storage.js';
 
 const TIPOS = [['PERSONAL','Personal (10.7%)'],['CONVENIO','Convenio (2.0%)'],['GOBIERNO','Gobierno/Negocio (10%)'],['AMERICANO','Americano (10-15%)']];
 const PLAZOS = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,20,24];
@@ -189,10 +190,46 @@ export async function abrirTuberia(perfil) {
       const nuevo = stSel.value;
       if (nuevo===pr.status){ return; }
       if (nuevo==='Surtidos'){ alert('Para surtir usa el botón "Surtir → cartera".'); stSel.value=pr.status; return; }
+      if (nuevo==='Visita Domiciliaria'){ abrirModalVisita(pr, stSel); return; }
       if (!confirm('¿Cambiar estatus a: '+nuevo+'?')){ stSel.value=pr.status; return; }
       try { await repo.cambiarStatus(pr, nuevo, perfil); pr.status=nuevo; avisarWA(pr,nuevo); pintarAcciones(); }
       catch(e){ alert('❌ '+e.message); stSel.value=pr.status; }
     });
+
+    // Modal: enviar a verificación domiciliaria (dispara visita PENDIENTE a la cola de Visitas)
+    function abrirModalVisita(pr, stSel){
+      const kyc = (pr.cotizacion_json&&pr.cotizacion_json.expediente)||{};
+      const dom = kyc.domicilio||{};
+      const dir = [dom.calle, dom.colonia||pr.colonia, [dom.ciudad||pr.municipio, dom.cp].filter(Boolean).join(' ').trim()].filter(Boolean).join(', ');
+      const av = kyc.aval ? [kyc.aval.nombre, kyc.aval.tel].filter(Boolean).join(' · ') : '';
+      const m = el(`<div class="p-modal"><div class="p-mbox">
+        <div class="sec-h"><span class="t">Enviar a verificación domiciliaria</span><span class="ln"></span></div>
+        <div class="note" style="margin:0 0 8px">Se cambia el estatus y se crea una visita PENDIENTE en el módulo de Visitas.</div>
+        <label class="alab">Teléfono</label><input class="inp" id="mv-tel" value="${pr.telefono||dom.celular||''}">
+        <label class="alab">Dirección</label><input class="inp" id="mv-dir" value="${dir}">
+        <label class="alab">Aval / referencia</label><input class="inp" id="mv-av" value="${av}">
+        <label class="alab">Horario de visita</label><input class="inp" id="mv-hor" placeholder="Ej. Lun a Vie 9-18h / Horario abierto">
+        <label class="alab">Nota para el verificador</label><textarea class="inp" id="mv-nota" rows="2" style="resize:vertical"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn-primary" id="mv-ok" style="flex:1;margin:0">Enviar visita</button>
+          <button class="btn-primary" id="mv-cx" style="flex:0 0 auto;margin:0;background:var(--slate)">Cancelar</button>
+        </div></div></div>`);
+      document.body.appendChild(m);
+      const cerrar=(revert)=>{ m.remove(); if(revert) stSel.value=pr.status; };
+      m.querySelector('#mv-cx').onclick=()=>cerrar(true);
+      m.addEventListener('click',e=>{ if(e.target===m) cerrar(true); });
+      m.querySelector('#mv-ok').onclick=async()=>{
+        const datos={ telefono:m.querySelector('#mv-tel').value.trim(), direccion:m.querySelector('#mv-dir').value.trim(),
+          aval:m.querySelector('#mv-av').value.trim(), horarios:m.querySelector('#mv-hor').value.trim(), nota:m.querySelector('#mv-nota').value.trim() };
+        const btn=m.querySelector('#mv-ok'); btn.disabled=true; btn.textContent='Enviando…';
+        try{
+          await repo.cambiarStatus(pr,'Visita Domiciliaria',perfil);
+          await repo.dispararVisitaVerificacion(pr, datos, perfil);
+          pr.status='Visita Domiciliaria'; avisarWA(pr,'Visita Domiciliaria'); pintarAcciones();
+          m.remove(); alert('✅ Estatus actualizado y visita enviada a la cola de Visitas.');
+        }catch(e){ alert('❌ '+e.message); btn.disabled=false; btn.textContent='Enviar visita'; }
+      };
+    }
 
     // Tabs
     const tabs = sub.querySelectorAll('.ex-tab');
@@ -323,19 +360,38 @@ export async function abrirTuberia(perfil) {
     // ── TAB DOCUMENTOS (checklist) ──
     function pintarDocs(b) {
       const saved = (pr.cotizacion_json&&pr.cotizacion_json.checklist)||[];
+      const fotos = (pr.cotizacion_json&&pr.cotizacion_json.fotos)||[];
+      const grid = (arr)=> arr.length ? arr.map(u=>`<a href="${u}" target="_blank" rel="noopener" class="ft-thumb"><img src="${u}" loading="lazy" alt="evidencia"></a>`).join('') : '<div class="dempty">Sin fotos aún.</div>';
       b.innerHTML = `
         <div class="note" style="margin-bottom:10px">Marca los documentos que debe entregar este cliente. Luego puedes copiar la lista para WhatsApp.</div>
         <div id="dk-list">${DOCS_REQ.map((d,i)=>`<label class="dk-item"><input type="checkbox" class="dk" data-d="${i}" ${saved.includes(d)?'checked':''}> <span>${d}</span></label>`).join('')}</div>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="btn-primary" id="dk-save" style="margin:0;flex:1">Guardar checklist</button>
           <button class="btn-primary" id="dk-wa" style="margin:0;flex:1;background:#25D366">Copiar para WhatsApp</button>
-        </div>`;
+        </div>
+        <div class="sec-h" style="margin-top:16px"><span class="t">Evidencias / Fotos</span><span class="ln"></span></div>
+        <input type="file" id="ft-in" accept="image/*" multiple style="font-size:.85em;width:100%">
+        <button class="btn-primary" id="ft-up" style="margin:8px 0 0;width:100%">Subir fotos</button>
+        <div id="ft-grid" class="ft-grid">${grid(fotos)}</div>`;
       const leer=()=>[...b.querySelectorAll('.dk:checked')].map(c=>DOCS_REQ[parseInt(c.dataset.d)]);
       b.querySelector('#dk-save').addEventListener('click', async ()=>{ try{ await repo.guardarChecklist(pr, leer(), perfil); alert('✅ Checklist guardado ('+leer().length+' docs).'); }catch(e){ alert('❌ '+e.message); } });
       b.querySelector('#dk-wa').addEventListener('click', ()=>{
         const docs=leer(); if(!docs.length) return alert('Marca al menos un documento.');
         const msg = `¡Buen día! 🙋\nSu crédito ha sido pre-autorizado. Le pedimos enviar la documentación clara, completa y legible:\n\n`+docs.map(d=>'• '+d).join('\n')+`\n\nQuedamos en espera para continuar su proceso. ¡Gracias! ✅`;
         navigator.clipboard.writeText(msg).then(()=>alert('✅ Lista copiada al portapapeles.')).catch(()=>{ window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank'); });
+      });
+      b.querySelector('#ft-up').addEventListener('click', async ()=>{
+        const inp=b.querySelector('#ft-in'); const files=[...(inp.files||[])];
+        if(!files.length) return alert('Selecciona al menos una foto.');
+        const btn=b.querySelector('#ft-up'); btn.disabled=true; btn.textContent='Subiendo…';
+        try{
+          const urls=await subirFotos(files,'tuberia');
+          if(!urls.length) throw new Error('No se pudo subir ninguna foto.');
+          const r=await repo.guardarFotos(pr, urls, perfil);
+          b.querySelector('#ft-grid').innerHTML=grid(r.fotos); inp.value='';
+          alert('✅ '+urls.length+' foto(s) subida(s).');
+        }catch(e){ alert('❌ '+e.message); }
+        finally{ btn.disabled=false; btn.textContent='Subir fotos'; }
       });
     }
 

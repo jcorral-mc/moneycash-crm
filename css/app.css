@@ -434,3 +434,8 @@ svg{display:block}
 .dash-tbl tbody tr:last-child td{border-bottom:none}
 .dash-tbl .dl{color:var(--ink2);font-weight:700}
 .dash-tbl .dempty{text-align:center;color:var(--slate);font-weight:500;padding:16px}
+
+/* Tubería v2 — galería de evidencias */
+.ft-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px;margin-top:10px}
+.ft-thumb{display:block;border-radius:10px;overflow:hidden;border:1px solid var(--line);aspect-ratio:1/1;background:var(--bg)}
+.ft-thumb img{width:100%;height:100%;object-fit:cover;display:block}
