@@ -195,3 +195,25 @@ svg{display:block}
 .p-mbox{background:var(--card);border-radius:16px;padding:22px;max-width:360px;width:100%;display:flex;flex-direction:column}
 .p-mtit{font-weight:700;font-size:1.05em;margin:6px 0 8px}
 .p-mtxt{color:var(--ink2);font-size:.9em;margin-bottom:14px}
+
+/* Bancos */
+.bk-hero{background:linear-gradient(135deg,var(--ink),var(--navy));border-radius:16px;padding:16px 18px;color:#fff}
+.bk-saldo{font-size:1.85em;font-weight:700;margin-top:4px}
+.bk-mes{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 6px;margin-top:12px}
+.bk-mes>div{flex:1;text-align:center}
+.bk-ml{font-size:.64em;color:var(--slate);letter-spacing:.04em}
+.bk-acc{display:flex;gap:8px;margin-top:12px}
+.bk-acc button{flex:1;padding:10px 4px;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:.74em;cursor:pointer;line-height:1.5;background:var(--ink)}
+.bk-chips{display:flex;gap:6px;margin-top:10px;overflow-x:auto;padding-bottom:2px}
+.bk-chip{font-size:.8em;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--slate);cursor:pointer;white-space:nowrap}
+.bk-chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.bk-mov{display:flex;align-items:center;gap:11px;padding:11px 2px;border-bottom:1px solid var(--line)}
+.bk-ic{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700}
+.bk-ic.in{background:#e6f5ee;color:var(--green)} .bk-ic.out{background:#fdecec;color:var(--red)} .bk-ic.tr{background:#e7f0fb;color:var(--steel)}
+.bk-cpt{font-size:.86em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bk-meta{font-size:.72em;color:var(--slate);margin-top:1px}
+.bk-tag{background:var(--bg);padding:1px 7px;border-radius:999px;margin-right:6px}
+.bk-amt{font-weight:700;white-space:nowrap;font-size:.9em}
+.bk-amt.in{color:var(--green)} .bk-amt.out{color:var(--red)} .bk-amt.tr{color:var(--steel)}
+.bk-cuentas{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bk-cta{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}

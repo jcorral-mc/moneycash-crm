@@ -25,7 +25,7 @@ export function construirResumen(bancos, movimientos, mes, anio) {
     if (f.slice(0,7) !== yyMM) continue;
     const tipo = U(r.tipo), monto = Number(r.monto)||0, tr = esTransfer(r);
     if (!tr) { if (tipo==='INGRESO') mesIng+=monto; else if (tipo==='EGRESO') mesEgr+=monto; }
-    movs.push({ id:r.id, fecha:f, tipo, transfer:tr, cuenta:String(r.cuenta||'').trim(),
+    movs.push({ id:r.id, fecha:f, hora:String(r.hora||''), tipo, transfer:tr, cuenta:String(r.cuenta||'').trim(),
       monto:Math.round(monto), concepto:String(r.concepto||''), origen:String(r.origen||''), obs:String(r.obs||''), reversado:!!r.reversado });
   }
   movs.sort((a,b)=> (b.fecha<a.fecha?-1:b.fecha>a.fecha?1:0) || (b.id-a.id));
