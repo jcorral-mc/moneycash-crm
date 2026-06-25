@@ -49,6 +49,39 @@ export async function guardarEvaluacion(prospecto, respuestas, perfil) {
   return { ok:true, score };
 }
 
+/** Guarda el expediente KYC dentro de cotizacion_json.expediente. */
+export async function guardarKYC(prospecto, expediente, perfil) {
+  const cot = prospecto.cotizacion_json || {};
+  cot.expediente = expediente;
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  prospecto.cotizacion_json = cot;
+  await logAudit(perfil, 'TUB_KYC', prospecto.nombre, 'expediente actualizado');
+  return { ok: true };
+}
+
+/** Guarda el checklist de documentos dentro de cotizacion_json.checklist. */
+export async function guardarChecklist(prospecto, checklist, perfil) {
+  const cot = prospecto.cotizacion_json || {};
+  cot.checklist = checklist;
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  prospecto.cotizacion_json = cot;
+  await logAudit(perfil, 'TUB_CHECKLIST', prospecto.nombre, (checklist || []).length + ' docs');
+  return { ok: true };
+}
+
+/** Agrega una nota a la bitácora (prepende con timestamp, igual que el Script). */
+export async function agregarNota(prospecto, texto, perfil) {
+  const t = String(texto || '').trim();
+  if (!t) throw new Error('Escribe una nota.');
+  const ts = new Date().toLocaleString('es-MX', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const quien = (perfil && perfil.nombre) ? (' — ' + perfil.nombre) : '';
+  const nuevas = `[${ts}] ${t}${quien}\n${prospecto.notas || ''}`.trim();
+  await db.from('prospectos').update({ notas: nuevas }).eq('id', prospecto.id);
+  prospecto.notas = nuevas;
+  await logAudit(perfil, 'TUB_NOTA', prospecto.nombre, t.slice(0, 60));
+  return { ok: true, notas: nuevas };
+}
+
 export async function cambiarStatus(prospecto, nuevoStatus, perfil) {
   await db.from('prospectos').update({ status:nuevoStatus }).eq('id', prospecto.id);
   await logAudit(perfil, 'TUB_STATUS', prospecto.nombre, nuevoStatus);
