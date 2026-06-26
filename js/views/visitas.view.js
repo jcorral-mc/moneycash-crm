@@ -2,6 +2,7 @@
 import { el } from '../lib/dom.js';
 import { construirLista, VIS_TIPOS, tipoAsignable, colorUrgencia } from '../services/visitas.service.js';
 import { fetchVisitas, asignarVisita, resolverVisita, resolverVerificacion, guardarAvanceTitular, reprogramarVisita } from '../repositories/visitas.repo.js';
+import { fetchCartera } from '../repositories/clientes.repo.js';
 
 const PUNTOS_VERIF = ['Identificación vigente y en físico','Comprobante de domicilio reciente (≤3 meses)','Fachada que coincida','Garantías del interior','Colonia o calle viable'];
 
@@ -59,9 +60,13 @@ export async function abrirVisitas(perfil) {
   }
 
   function formAsignar() {
+    const esCobranza = TAB === 'COBRANZA';
+    const campoCliente = esCobranza
+      ? `<label class="alab">Cliente activo *</label><select class="inp" id="a-cli"><option value="">Cargando clientes…</option></select>`
+      : `<label class="alab">Cliente *</label><input class="inp" id="a-cli">`;
     const sub = el(`<div class="overlay"><div class="ohead"><button class="back">←</button><div class="ot">Asignar visita (${TAB})</div></div>
       <div class="ocontent">
-        <label class="alab">Cliente *</label><input class="inp" id="a-cli">
+        ${campoCliente}
         <label class="alab">Teléfono</label><input class="inp" id="a-tel" inputmode="tel">
         <label class="alab">Dirección</label><input class="inp" id="a-dir">
         <label class="alab">Referencias</label><input class="inp" id="a-ref">
@@ -76,9 +81,30 @@ export async function abrirVisitas(perfil) {
     sub.querySelector('#a-fec').value = new Date().toISOString().slice(0,10);
     const ab = sub.querySelector('#a-abierto'), hr = sub.querySelector('#a-hora');
     ab.addEventListener('change', ()=>{ hr.disabled = ab.checked; });
+
+    // COBRANZA: cargar clientes activos (saldo>0) y autollenar tel/dir al elegir.
+    if (esCobranza) {
+      const selCli = sub.querySelector('#a-cli');
+      fetchCartera().then(cartera => {
+        const activos = (cartera||[]).filter(c => (parseFloat(c.saldo)||0) > 0)
+          .sort((a,b)=> String(a.nombre||'').localeCompare(String(b.nombre||'')));
+        selCli.innerHTML = '<option value="">— elige cliente —</option>' +
+          activos.map((c,i)=>`<option value="${i}">${c.nombre}${c.ejecutivo?(' · '+c.ejecutivo):''}</option>`).join('');
+        selCli.addEventListener('change', ()=>{
+          const c = activos[Number(selCli.value)]; if (!c) return;
+          selCli.dataset.nombre = c.nombre || '';
+          const tel = c.telefono || c.tel || ''; const dir = c.direccion || c.domicilio || '';
+          if (tel) sub.querySelector('#a-tel').value = tel;
+          if (dir) sub.querySelector('#a-dir').value = dir;
+        });
+      }).catch(()=>{ selCli.innerHTML = '<option value="">No se pudieron cargar clientes</option>'; });
+    }
+
     sub.querySelector('#a-go').addEventListener('click', async ()=>{
       const horaVal = sub.querySelector('#a-hora').value;
-      const d = { tipo:TAB, cliente:sub.querySelector('#a-cli').value, telefono:sub.querySelector('#a-tel').value,
+      const cliEl = sub.querySelector('#a-cli');
+      const cliente = esCobranza ? (cliEl.dataset.nombre || '') : cliEl.value;
+      const d = { tipo:TAB, cliente, telefono:sub.querySelector('#a-tel').value,
         direccion:sub.querySelector('#a-dir').value, referencias:sub.querySelector('#a-ref').value,
         fecha:sub.querySelector('#a-fec').value, horario: horaVal ? (horaVal+'-'+_masUnaHora(horaVal)) : '',
         horarioAbierto: ab.checked, comentario:sub.querySelector('#a-mot').value };

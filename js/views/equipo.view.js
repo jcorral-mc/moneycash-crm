@@ -2,6 +2,7 @@
 // Gestiona perfiles (rol, ejecutivo, alta/baja). Solo ADMIN. Estilo CRM nuevo.
 import { el } from '../lib/dom.js';
 import { construirLista, ROLES_LISTA, ROLES } from '../services/equipo.service.js';
+import { fetchCartera } from '../repositories/clientes.repo.js';
 import * as repo from '../repositories/equipo.repo.js';
 
 export async function abrirEquipo(perfil) {
@@ -22,7 +23,7 @@ export async function abrirEquipo(perfil) {
       <div class="usr-roles">
         ${ROLES_LISTA.map(r=>`<label class="usr-rol"><input type="radio" name="eq-rol" value="${r}"> ${ROLES[r]}</label>`).join('')}
       </div>
-      <div id="eq-eje-wrap" style="display:none"><label class="alab">Ejecutivo (cartera propia)</label><input class="inp" id="eq-eje" placeholder="Nombre del ejecutivo"></div>
+      <div id="eq-eje-wrap" style="display:none"><label class="alab">Cartera / Ejecutivo</label><input class="inp" id="eq-eje" list="eq-eje-list" placeholder="Elige o escribe una cartera"><datalist id="eq-eje-list"></datalist></div>
       <button class="btn-primary" id="eq-go">GUARDAR USUARIO</button>
       <button class="p-sec" id="eq-cancel" style="width:100%;margin-top:8px;display:none">Cancelar edición</button>
       <div class="login-err" id="eq-err"></div>
@@ -33,6 +34,12 @@ export async function abrirEquipo(perfil) {
 
   const $ = s => c.querySelector(s);
   const mail=$('#eq-mail'), nom=$('#eq-nom'), ejeWrap=$('#eq-eje-wrap'), eje=$('#eq-eje'), err=$('#eq-err');
+
+  // Poblar lista de carteras (ejecutivos existentes) para el datalist.
+  fetchCartera().then(cartera => {
+    const ejecutivos = [...new Set((cartera||[]).map(c2 => String(c2.ejecutivo||'').trim()).filter(Boolean))].sort();
+    const dl = $('#eq-eje-list'); if (dl) dl.innerHTML = ejecutivos.map(e => `<option value="${e}"></option>`).join('');
+  }).catch(()=>{});
 
   // Mostrar/ocultar ejecutivo según rol
   c.querySelectorAll('input[name="eq-rol"]').forEach(r => r.addEventListener('change', () => {

@@ -1,8 +1,7 @@
-// Vista Reactivaciones — clientes en ceros candidatos a nuevo crédito (mercado abierto).
+// Vista Reactivaciones — clientes en ceros candidatos a reactivación; se gestionan con comentarios.
 import { el, money } from '../lib/dom.js';
 import { construirReactivaciones } from '../services/reactivaciones.service.js';
-import { cargarReactivaciones } from '../repositories/reactivaciones.repo.js';
-import { abrirAlta } from './alta.view.js';
+import { cargarReactivaciones, fetchComentariosReactivacion, agregarComentarioReactivacion } from '../repositories/reactivaciones.repo.js';
 
 export async function abrirReactivaciones(perfil) {
   const ov = el(`<div class="overlay"><div class="ohead"><button class="back">←</button><div class="ot">Reactivaciones</div></div><div class="ocontent"><div class="loader">Cargando…</div></div></div>`);
@@ -22,8 +21,41 @@ export async function abrirReactivaciones(perfil) {
 
   const tarjeta = cl => `<div class="cli" style="display:block">
     <div style="display:flex;justify-content:space-between"><div><div class="nm">${cl.nombre}</div><div class="mt">Último préstamo ${money(cl.ultimoPrestamo)}${cl.fechaLiquido?(' · liquidó '+cl.fechaLiquido):''}${cl.frecuencia?(' · '+cl.frecuencia):''}</div></div></div>
-    ${puedeReactivar?`<button class="mini-ok" data-react="${encodeURIComponent(cl.nombre)}" style="width:auto;padding:6px 12px;margin-top:8px">Reactivar (nuevo crédito)</button>`:''}
+    ${puedeReactivar?`<button class="mini-ok" data-react="${encodeURIComponent(cl.nombre)}" style="width:auto;padding:6px 12px;margin-top:8px">Gestionar reactivación</button>`:''}
   </div>`;
+
+  // Panel de gestión: comentarios + opinión sobre reactivar (no manda a "nuevo cliente").
+  async function abrirGestion(cl) {
+    const sub = el(`<div class="overlay"><div class="ohead"><button class="back">←</button><div class="ot">${cl.nombre}</div></div>
+      <div class="ocontent">
+        <div class="note" style="margin-bottom:10px">Último préstamo ${money(cl.ultimoPrestamo)}${cl.fechaLiquido?(' · liquidó '+cl.fechaLiquido):''}${cl.ejecutivo?(' · '+cl.ejecutivo):''}</div>
+        <label class="alab">¿Conviene reactivar?</label>
+        <select class="inp" id="g-op"><option value="">— opinión —</option><option>Sí, buen cliente</option><option>Tal vez, con seguimiento</option><option>No por ahora</option></select>
+        <label class="alab">Comentario</label><textarea class="inp" id="g-com" rows="3" placeholder="Qué opinas de reactivar con nosotros…"></textarea>
+        <button class="btn-primary" id="g-go">Guardar comentario</button><div class="login-err" id="g-e"></div>
+        <div class="dash-modtit" style="margin-top:16px">Historial</div>
+        <div id="g-hist"><div class="loader">Cargando…</div></div>
+      </div></div>`);
+    document.body.appendChild(sub);
+    sub.querySelector('.back').addEventListener('click', ()=>sub.remove());
+    const hist = sub.querySelector('#g-hist');
+    const pintarHist = async () => {
+      const items = await fetchComentariosReactivacion(cl.nombre).catch(()=>[]);
+      hist.innerHTML = items.length
+        ? items.map(it=>`<div class="cli" style="display:block"><div class="nm" style="font-size:.92em">${it.opinion||'Comentario'}</div><div class="mt">${it.comentario}</div><div class="mt" style="opacity:.7">${it.por||''} · ${it.fecha||''}</div></div>`).join('')
+        : '<div class="note" style="text-align:center">Sin comentarios todavía.</div>';
+    };
+    sub.querySelector('#g-go').addEventListener('click', async ()=>{
+      const comentario = sub.querySelector('#g-com').value.trim();
+      const opinion = sub.querySelector('#g-op').value;
+      try {
+        await agregarComentarioReactivacion({ cliente:cl.nombre, comentario, opinion }, perfil);
+        sub.querySelector('#g-com').value=''; sub.querySelector('#g-op').value='';
+        await pintarHist();
+      } catch(e){ const er=sub.querySelector('#g-e'); er.textContent=e.message; er.style.display='block'; }
+    });
+    pintarHist();
+  }
 
   function render() {
     const q = (c.querySelector('#re-busca').value||'').trim().toLowerCase();
@@ -40,9 +72,9 @@ export async function abrirReactivaciones(perfil) {
     }));
     if (puedeReactivar) box.querySelectorAll('[data-react]').forEach(b => b.addEventListener('click', () => {
       const nombre = decodeURIComponent(b.dataset.react);
-      try { navigator.clipboard && navigator.clipboard.writeText(nombre); } catch(e){}
-      alert('Reactivando a ' + nombre + '.\nCaptura el nuevo crédito en el alta (nombre copiado).');
-      ov.remove(); abrirAlta(perfil);
+      let cl = null;
+      r.porEjecutivo.forEach(g => { const f = g.clientes.find(x => x.nombre === nombre); if (f) cl = { ...f, ejecutivo: g.ejecutivo }; });
+      if (cl) abrirGestion(cl);
     }));
   }
   c.querySelector('#re-busca').addEventListener('input', render);
