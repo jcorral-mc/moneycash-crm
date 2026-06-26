@@ -55,7 +55,7 @@ export async function abrirTuberia(perfil) {
   const rol = String((perfil && perfil.rol) || '').toUpperCase();
   const ov = el(`<div class="overlay"><div class="ohead"><button class="back">←</button><div class="ot">Tubería</div></div>
     <div class="otabs"><button class="tb-tab on" data-t="PIPE">Pipeline</button><button class="tb-tab" data-t="NUEVO">+ Nuevo</button></div>
-    <div class="ocontent"></div></div>`);
+    <div class="ocontent tv"></div></div>`);
   document.body.appendChild(ov);
   ov.querySelector('.back').addEventListener('click', () => ov.remove());
   const root = ov.querySelector('.ocontent');
@@ -126,7 +126,7 @@ export async function abrirTuberia(perfil) {
   // ─────────────────────────── DETALLE DEL PROSPECTO (router por etapa) ───────────────────────────
   function abrirProspecto(pr) {
     const sub = el(`<div class="overlay"><div class="ohead"><button class="back">←</button><div class="ot">${pr.nombre}</div></div>
-      <div class="ocontent"><div id="stepper"></div><div id="stage"></div></div></div>`);
+      <div class="ocontent tv"><div id="stepper"></div><div id="stage"></div></div></div>`);
     document.body.appendChild(sub);
     sub.querySelector('.back').addEventListener('click', () => sub.remove());
     const stepEl = sub.querySelector('#stepper');

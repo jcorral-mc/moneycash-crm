@@ -456,3 +456,60 @@ svg{display:block}
 .bal-it{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:.82em;border-bottom:1px solid var(--bg)}
 .bal-it:last-child{border-bottom:none}
 .sec-h .num{margin-left:auto;font-size:.86em}
+
+/* ─────────────── TUBERÍA V2 (scopeado a .tv) ─────────────── */
+.tv{padding:2px}
+.tv h4{font-size:.92em;color:var(--navy);font-weight:700;margin-bottom:10px}
+.tv .muted{color:var(--slate);font-size:.82em}
+/* Tabs */
+.otabs{display:flex;gap:8px;padding:10px 14px 2px}
+.otabs .tb-tab{flex:1;padding:9px;border:1px solid var(--line);background:#fff;border-radius:10px;font-weight:600;font-size:.82em;color:var(--slate);font-family:inherit;cursor:pointer}
+.otabs .tb-tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+/* KPIs */
+.tv .kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.tv .kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 15px;position:relative;overflow:hidden}
+.tv .kpi::before{content:"";position:absolute;top:0;left:0;width:100%;height:3px;background:var(--steel)}
+.tv .kn{font-size:1.35em;font-weight:700;color:var(--navy)}
+.tv .kl{font-size:.62em;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--slate);margin-top:4px}
+/* Card */
+.tv .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;margin-bottom:12px}
+/* Acordeón por etapa */
+.tv .acc-sec{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.tv .acc-head{display:flex;align-items:center;gap:9px;padding:13px 14px;cursor:pointer;font-size:.9em}
+.tv .acc-head b{flex:1;color:var(--ink2)}
+.tv .acc-step{width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.72em;font-weight:700;flex:0 0 auto}
+.tv .acc-cnt{background:#EEF2F6;color:var(--slate);font-weight:700;font-size:.72em;padding:2px 9px;border-radius:10px}
+.tv .acc-body{display:none;border-top:1px solid var(--line)}
+.tv .acc-sec.open .acc-body{display:block}
+.tv .acc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-bottom:1px solid #f2f6f9}
+.tv .acc-row:last-child{border-bottom:none}
+/* Stepper */
+.tv .stepper{display:flex;align-items:center;margin:6px 0 4px}
+.tv .stepper i{flex:1;height:2px;background:var(--line)}
+.tv .step{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:0 0 auto;border:2px solid var(--line);background:#fff}
+.tv .step span{font-size:.68em;font-weight:700;color:var(--slate)}
+.tv .step.done{background:var(--green);border-color:var(--green)}.tv .step.done span{color:#fff}
+.tv .step.now{background:var(--gold);border-color:var(--gold)}.tv .step.now span{color:var(--ink)}
+.tv .step-label{text-align:center;font-size:.82em;color:var(--slate);margin:6px 0 14px}
+.tv .step-label b{color:var(--navy)}
+/* Items de formulario (evaluación / expediente) */
+.tv .ev-item{margin-bottom:10px}
+.tv .ev-item label{display:block;font-size:.74em;font-weight:600;color:var(--slate);margin-bottom:5px}
+.tv .inp.miss{border-color:var(--red);background:#FBEAE7}
+/* Documentos */
+.tv .doc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #f2f6f9}
+.tv .doc-row:last-child{border-bottom:none}
+.tv .doc-chk{display:flex;align-items:center;gap:8px;font-size:.84em;cursor:pointer;flex:1}
+.tv .doc-chk input{width:17px;height:17px;flex:0 0 auto}
+.tv .doc-act{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+/* Botones */
+.tv .primary{background:var(--navy);color:#fff;border:none;border-radius:11px;font-weight:600;font-family:inherit;font-size:.9em;padding:11px 16px;cursor:pointer}
+.tv .danger{background:#fff;color:var(--red);border:1px solid var(--red);border-radius:11px;font-weight:600;font-family:inherit;font-size:.9em;padding:11px 16px;cursor:pointer}
+.tv .ghost{background:#fff;color:var(--navy);border:1px solid var(--line);border-radius:11px;font-weight:600;font-family:inherit;font-size:.9em;padding:11px 16px;cursor:pointer}
+.tv .primary.big,.tv .danger.big{width:100%;padding:13px;margin-top:6px}
+.tv .primary:disabled,.tv .danger:disabled{opacity:.5;cursor:not-allowed}
+.tv .mini{padding:7px 11px;border:1px solid var(--line);background:#fff;border-radius:8px;font-weight:600;font-size:.76em;font-family:inherit;color:var(--navy);cursor:pointer;text-decoration:none;display:inline-block}
+.tv .mini:disabled{opacity:.45;cursor:not-allowed}
+/* Cajas de resultado */
+.tv .ok-box{background:#E8F5EE;border:1px solid #BfE3Cf;color:var(--green);border-radius:12px;padding:16px;text-align:center;font-weight:600;font-size:.9em}
+.tv .err-box{background:#FBEAE7;border:1px solid #F2C9C2;color:var(--red);border-radius:12px;padding:16px;text-align:center;font-weight:600;font-size:.9em}
