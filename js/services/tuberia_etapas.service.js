@@ -47,7 +47,7 @@ export function gates(p) {
   const vis = c.visita || {};
   return {
     procesoIniciado:    !!(c.proceso && c.proceso.iniciado),
-    evaluacionCompleta: !!(c.evaluacion && c.evaluacion.completa),
+    evaluacionCompleta: !!(c.evaluacion && (c.evaluacion.completa || c.evaluacion.omitida)),
     expedienteCompleto: !!(c.expediente && c.expediente.completo),
     docsSolicitados:    !!(c.documentos && c.documentos.solicitadosFecha),
     docsCompletos:      docsCompletos(p),

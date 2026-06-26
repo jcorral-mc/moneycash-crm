@@ -2,7 +2,6 @@
 // El usuario NO mueve la etapa: el sistema la deriva del avance del expediente.
 // Cada pantalla se desbloquea solo cuando la anterior está completa.
 import { el, money, norm } from '../lib/dom.js';
-import { cotizar, FRECUENCIAS } from '../services/cotizador.service.js';
 import {
   ETAPAS_V2, ETAPAS_CERRADAS_V2, MODULOS_CORRECCION,
   calcularEtapa, indiceEtapa, docsRequeridos,
@@ -54,27 +53,20 @@ const EXP_CAMPOS = [
 export async function abrirTuberia(perfil) {
   const rol = String((perfil && perfil.rol) || '').toUpperCase();
   const ov = el(`<div class="overlay"><div class="ohead"><button class="back">←</button><div class="ot">Tubería</div></div>
-    <div class="otabs"><button class="tb-tab on" data-t="PIPE">Pipeline</button><button class="tb-tab" data-t="NUEVO">+ Nuevo</button></div>
     <div class="ocontent tv"></div></div>`);
   document.body.appendChild(ov);
   ov.querySelector('.back').addEventListener('click', () => ov.remove());
   const root = ov.querySelector('.ocontent');
-  let TAB = 'PIPE', PROSPECTOS = null;
+  let PROSPECTOS = null;
 
   async function cargar(force) {
     if (PROSPECTOS && !force) return PROSPECTOS;
     PROSPECTOS = await repo.fetchProspectos();
     return PROSPECTOS;
   }
-  ov.querySelectorAll('.tb-tab').forEach(b => b.addEventListener('click', () => {
-    TAB = b.dataset.t;
-    ov.querySelectorAll('.tb-tab').forEach(x => x.classList.toggle('on', x === b));
-    render();
-  }));
 
   function render() {
-    if (TAB === 'PIPE') renderPipeline();
-    else renderNuevo();
+    renderPipeline();
   }
 
   // ─────────────────────────── PIPELINE (read-only, por etapa) ───────────────────────────
@@ -132,7 +124,7 @@ export async function abrirTuberia(perfil) {
     const stepEl = sub.querySelector('#stepper');
     const stageEl = sub.querySelector('#stage');
 
-    const recargar = async () => { await cargar(true); if (TAB === 'PIPE') renderPipeline(); };
+    const recargar = async () => { await cargar(true); renderPipeline(); };
 
     function pintar() {
       const etapa = calcularEtapa(pr);
@@ -204,6 +196,34 @@ export async function abrirTuberia(perfil) {
       try { await repo.guardarEvaluacion(pr, resp, perfil); refresh(); } catch (e) { alert('❌ ' + e.message); btn.disabled = false; }
     });
     r(btn);
+
+    // #8 — Omitir evaluación SOLO con autorización de Jurídico.
+    const ev = (pr.cotizacion_json && pr.cotizacion_json.evaluacion) || {};
+    const puedeAutorizar = ['JURIDICO', 'ADMIN'].includes(rol);
+    const om = el(`<div class="card" style="margin-top:6px"><h4>¿Omitir evaluación?</h4>
+      <div class="muted" style="font-size:12px">La evaluación solo puede omitirse con autorización de Jurídico.</div>
+      ${ev.solicitudOmision ? `<div class="liqrow"><span>Solicitud de omisión</span><b>${ev.solicitudOmision.por || ''}</b></div><div class="muted" style="font-size:12px">Motivo: ${ev.solicitudOmision.motivo || '—'}</div>` : ''}
+    </div>`);
+    if (puedeAutorizar) {
+      const b2 = el(`<button class="ghost big">Autorizar omisión (Jurídico)</button>`);
+      b2.addEventListener('click', async () => {
+        const motivo = prompt('Motivo de la omisión:') || '';
+        if (motivo === null) return;
+        b2.disabled = true;
+        try { await repo.omitirEvaluacion(pr, motivo, perfil); refresh(); } catch (e) { alert('❌ ' + e.message); b2.disabled = false; }
+      });
+      om.appendChild(b2);
+    } else {
+      const b2 = el(`<button class="ghost big">Solicitar a Jurídico omitir</button>`);
+      b2.addEventListener('click', async () => {
+        const motivo = prompt('¿Por qué pedir omitir la evaluación?') || '';
+        if (motivo === null) return;
+        b2.disabled = true;
+        try { await repo.solicitarOmisionEval(pr, motivo, perfil); alert('✅ Solicitud enviada a Jurídico.'); refresh(); } catch (e) { alert('❌ ' + e.message); b2.disabled = false; }
+      });
+      om.appendChild(b2);
+    }
+    r(om);
   }
 
   // Etapa 5 — EXPEDIENTE (campos obligatorios)
@@ -295,36 +315,125 @@ export async function abrirTuberia(perfil) {
     }
   }
 
-  // Etapa 8 — VALIDACIÓN JURÍDICA (Tabata): única revisión
+  // Etapa 8 — VALIDACIÓN JURÍDICA: revisión única CON fotos + encuesta + datos capturados.
   function stValidacion(pr, r, refresh) {
     const c = pr.cotizacion_json || {};
     const docs = docsRequeridos(pr);
+    const preguntas = getPreguntas();
+    const ev = c.evaluacion || {};
+    const exp = c.expediente || {};
+    const vis = c.visita || {};
+    const thumb = (url) => `<a href="${url}" target="_blank"><img src="${url}" loading="lazy" style="max-width:110px;max-height:110px;border-radius:8px;border:1px solid var(--line);object-fit:cover;margin:4px"></a>`;
+
+    // Encabezado de estado
     r(el(`<div class="card"><h4>Validación Jurídica</h4>
       <div class="muted" style="font-size:12px">Revisión única del expediente completo.</div>
-      <div class="liqrow"><span>Evaluación</span><b>${c.evaluacion && c.evaluacion.completa ? '✅ completa' : '—'}</b></div>
-      <div class="liqrow"><span>Expediente</span><b>${c.expediente && c.expediente.completo ? '✅ completo' : '—'}</b></div>
+      <div class="liqrow"><span>Evaluación</span><b>${ev.omitida ? '⚠️ omitida (autorizada)' : ev.completa ? '✅ completa' : '—'}</b></div>
+      <div class="liqrow"><span>Expediente</span><b>${exp.completo ? '✅ completo' : '—'}</b></div>
       <div class="liqrow"><span>Documentos</span><b>${docs.filter(d => d.archivo).length}/${docs.length} recibidos</b></div>
-      <div style="margin-top:8px">${docs.map(d => `<div class="liqrow"><span>${d.nombre}</span>${d.archivo ? `<a href="${d.archivo}" target="_blank">ver</a>` : '<span class="muted">—</span>'}</div>`).join('')}</div>
     </div>`));
-    const acc = el(`<div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="primary" id="v-ok">Aprobar</button>
-      <button class="danger" id="v-no">Rechazar</button>
-      <button class="ghost" id="v-cor">Solicitar correcciones</button></div>`);
-    r(acc);
-    acc.querySelector('#v-ok').addEventListener('click', async () => { try { await repo.validarJuridico(pr, 'APROBADO', null, '', perfil); refresh(); } catch (e) { alert('❌ ' + e.message); } });
-    acc.querySelector('#v-no').addEventListener('click', async () => { const n = prompt('Motivo del rechazo:'); if (n === null) return; try { await repo.validarJuridico(pr, 'RECHAZADO', null, n, perfil); refresh(); } catch (e) { alert('❌ ' + e.message); } });
-    acc.querySelector('#v-cor').addEventListener('click', async () => {
-      const modulo = prompt('¿A qué módulo regresa? (' + MODULOS_CORRECCION.join(' / ') + ')', 'Expediente');
-      if (modulo === null) return;
-      if (!MODULOS_CORRECCION.includes(modulo)) { alert('Módulo inválido.'); return; }
-      const n = prompt('¿Qué hay que corregir?') || '';
-      try { await repo.validarJuridico(pr, 'CORRECCIONES', modulo, n, perfil); refresh(); } catch (e) { alert('❌ ' + e.message); }
+
+    // Encuesta de evaluación (respuestas)
+    if (ev.omitida) {
+      r(el(`<div class="card"><h4>Encuesta de evaluación</h4><div class="ok-box" style="background:#FFF7ED;border-color:#F2C9C2;color:var(--amber)">Omitida con autorización de ${ev.autorizadaPor || 'Jurídico'}.<br><span class="muted">${ev.motivoOmision || ''}</span></div></div>`));
+    } else {
+      const resp = ev.respuestas || {};
+      const filas = preguntas.map(q => `<div class="liqrow"><span>${q.q}</span><b>${resp[q.key] || '—'}</b></div>`).join('');
+      r(el(`<div class="card"><h4>Encuesta de evaluación</h4>${filas}</div>`));
+    }
+
+    // Datos capturados del expediente
+    const expFilas = EXP_CAMPOS.map(cmp => `<div class="liqrow"><span>${cmp.label}</span><b>${exp[cmp.key] || '—'}</b></div>`).join('');
+    r(el(`<div class="card"><h4>Datos capturados</h4>${expFilas}</div>`));
+
+    // Documentos con vista previa de imágenes
+    const docCard = el(`<div class="card"><h4>Documentos</h4></div>`);
+    docs.forEach(d => {
+      const row = el(`<div class="doc-row"><span style="flex:1">${d.nombre}</span></div>`);
+      if (d.archivo) row.appendChild(el(thumb(d.archivo))); else row.appendChild(el('<span class="muted" style="font-size:12px">sin archivo</span>'));
+      docCard.appendChild(row);
     });
+    if (!docs.length) docCard.appendChild(el('<div class="muted" style="font-size:12px">Sin documentos solicitados.</div>'));
+    r(docCard);
+
+    // Fotos de visita (si ya hubo)
+    if (vis.fotos && vis.fotos.length) {
+      r(el(`<div class="card"><h4>Fotos de visita</h4><div>${vis.fotos.map(thumb).join('')}</div></div>`));
+    }
+
+    // Acciones: solo Jurídico/Admin
+    if (['JURIDICO', 'ADMIN'].includes(rol)) {
+      const acc = el(`<div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="primary" id="v-ok">Aprobar</button>
+        <button class="danger" id="v-no">Rechazar</button>
+        <button class="ghost" id="v-cor">Solicitar correcciones</button></div>`);
+      r(acc);
+      acc.querySelector('#v-ok').addEventListener('click', async () => { try { await repo.validarJuridico(pr, 'APROBADO', null, '', perfil); refresh(); } catch (e) { alert('❌ ' + e.message); } });
+      acc.querySelector('#v-no').addEventListener('click', async () => { const n = prompt('Motivo del rechazo:'); if (n === null) return; try { await repo.validarJuridico(pr, 'RECHAZADO', null, n, perfil); refresh(); } catch (e) { alert('❌ ' + e.message); } });
+      acc.querySelector('#v-cor').addEventListener('click', async () => {
+        const modulo = prompt('¿A qué módulo regresa? (' + MODULOS_CORRECCION.join(' / ') + ')', 'Expediente');
+        if (modulo === null) return;
+        if (!MODULOS_CORRECCION.includes(modulo)) { alert('Módulo inválido.'); return; }
+        const n = prompt('¿Qué hay que corregir?') || '';
+        try { await repo.validarJuridico(pr, 'CORRECCIONES', modulo, n, perfil); refresh(); } catch (e) { alert('❌ ' + e.message); }
+      });
+    } else {
+      r(el(`<div class="muted" style="font-size:12px;text-align:center">Solo Jurídico puede aprobar, rechazar o pedir correcciones.</div>`));
+    }
   }
 
-  // Etapa 9 — VISITA DOMICILIARIA (Eduardo): aprobar / rechazar (sin "pendiente")
+  // Etapa 9 — VISITA DOMICILIARIA: Vane DISPARA a Eduardo; queda parada hasta que él resuelve.
   function stVisita(pr, r, refresh) {
-    const card = el(`<div class="card"><h4>Visita Domiciliaria</h4>
+    const c = pr.cotizacion_json || {};
+    const vis = c.visita || {};
+    const exp = c.expediente || {};
+    const asig = vis.asignada;
+    const puedeAsignar = ['AUX_ADMIN', 'ADMIN', 'GERENTE'].includes(rol);
+    const puedeResolver = ['VISITAS', 'ADMIN'].includes(rol);
+
+    if (!asig) {
+      // Aún no se dispara: Vane confirma datos y la asigna a Eduardo.
+      const dirAuto = [exp.domicilio, exp.colonia, exp.cp ? ('CP ' + exp.cp) : ''].filter(x => x).join(', ');
+      const card = el(`<div class="card"><h4>Asignar visita a Eduardo</h4>
+        <div class="muted" style="font-size:12px;margin-bottom:8px">Confirma los datos. La visita se asigna a Eduardo y queda parada hasta que él la resuelva en Visitas.</div>
+        <div class="ev-item"><label>Teléfono</label><input class="inp" id="va-tel" value="${pr.telefono || ''}"></div>
+        <div class="ev-item"><label>Domicilio</label><input class="inp" id="va-dir" value="${dirAuto}"></div>
+        <div class="ev-item"><label>Aval (nombre y domicilio)</label><input class="inp" id="va-aval" value="${exp.ref1_nombre || ''}"></div>
+        <div class="ev-item"><label>Horario sugerido</label><input class="inp" id="va-hor" placeholder="Ej. 10am a 2pm"></div>
+        <div class="ev-item"><label>Indicaciones para Eduardo</label><textarea class="inp" id="va-nota" rows="2"></textarea></div>
+      </div>`);
+      r(card);
+      if (!puedeAsignar) { r(el(`<div class="muted" style="font-size:12px;text-align:center">Esperando que se asigne la visita a Eduardo.</div>`)); return; }
+      const btn = el(`<button class="primary big">Disparar visita a Eduardo</button>`);
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        const datos = {
+          telefono: card.querySelector('#va-tel').value.trim(),
+          direccion: card.querySelector('#va-dir').value.trim(),
+          aval: card.querySelector('#va-aval').value.trim(),
+          horario: card.querySelector('#va-hor').value.trim(),
+          nota: card.querySelector('#va-nota').value.trim(),
+        };
+        try { await repo.asignarVisita(pr, datos, perfil); alert('✅ Visita asignada a Eduardo.'); refresh(); } catch (e) { alert('❌ ' + e.message); btn.disabled = false; }
+      });
+      r(btn);
+      return;
+    }
+
+    // Ya asignada: parada hasta que Eduardo resuelva.
+    r(el(`<div class="card"><h4>Visita asignada a Eduardo</h4>
+      <div class="ok-box" style="background:#EFF6FF;border-color:#BcD6F2;color:var(--steel)">⏳ Esperando que Eduardo resuelva la visita (asignada el ${asig.fecha || ''}).</div>
+      <div class="liqrow"><span>Teléfono</span><b>${asig.telefono || '—'}</b></div>
+      <div class="liqrow"><span>Domicilio</span><b>${asig.direccion || '—'}</b></div>
+      <div class="liqrow"><span>Aval</span><b>${asig.aval || '—'}</b></div>
+      <div class="liqrow"><span>Horario</span><b>${asig.horario || '—'}</b></div>
+      ${asig.nota ? `<div class="muted" style="font-size:12px;margin-top:6px">Indicaciones: ${asig.nota}</div>` : ''}
+    </div>`));
+
+    if (!puedeResolver) { r(el(`<div class="muted" style="font-size:12px;text-align:center">Solo Eduardo (Visitas) puede aprobar o rechazar.</div>`)); return; }
+
+    // Eduardo: formato + fotos + resolver.
+    const card = el(`<div class="card"><h4>Resolver visita (Eduardo)</h4>
       <div class="ev-item"><label>Comentarios de la visita</label><textarea class="inp" id="vi-com" rows="3"></textarea></div>
       <div class="ev-item"><label>Fotografías</label><input type="file" id="vi-fotos" accept="image/*" multiple></div>
     </div>`);
@@ -351,62 +460,24 @@ export async function abrirTuberia(perfil) {
       <div class="liqrow"><span>Dispersión al cliente</span><b class="num">${money(sur.dispersion)}</b></div>
       ${sur.adeudoReno ? `<div class="liqrow"><span>Adeudo anterior (reno)</span><b class="num">-${money(sur.adeudoReno)}</b></div>` : ''}
       <div class="liqrow"><span>A repartir</span><b class="num">${money(sur.objetivoReparto)}</b></div>
-      <div class="ev-item"><label>Banco de salida</label><select class="inp" id="su-banco">${bancos.map(b => `<option value="${b.nombre}">${b.nombre}</option>`).join('')}</select></div>
+      <div class="liqrow"><span>Comisión</span><b class="num">${money(sur.comision)} ${sur.esFinanciada ? '(financiada)' : '(descontada)'}</b></div>
+      <div class="ev-item"><label>Banco de salida</label><select class="inp" id="su-banco"><option value="">— elige banco —</option>${bancos.map(b => `<option value="${b.cuenta}">${b.cuenta}</option>`).join('')}</select></div>
     </div>`);
     r(card);
+    if (!bancos.length) r(el(`<div class="err-box">No hay bancos cargados. Agrega cuentas en el módulo Bancos antes de surtir.</div>`));
     const btn = el(`<button class="primary big">Surtir → crear en CRM</button>`);
     btn.addEventListener('click', async () => {
-      if (!confirm('¿Surtir a ' + pr.nombre + '? Se creará el cliente y saldrá de la Tubería.')) return;
+      const cuenta = card.querySelector('#su-banco').value;
+      if (!cuenta) { alert('Elige el banco de salida antes de surtir.'); return; }
+      if (!confirm('¿Surtir a ' + pr.nombre + ' por ' + money(sur.objetivoReparto) + ' desde ' + cuenta + '? Se creará el cliente y saldrá de la Tubería.')) return;
       btn.disabled = true;
       try {
-        const reparto = [{ cuenta: card.querySelector('#su-banco').value, monto: sur.objetivoReparto }];
+        const reparto = [{ cuenta, monto: sur.objetivoReparto }];
         const res = await repo.enviarACartera(pr, reparto, perfil);
         alert((res && res.msg) || '✅ Surtido.'); sub.remove(); recargar();
       } catch (e) { alert('❌ ' + e.message); btn.disabled = false; }
     });
     r(btn);
-  }
-
-  // ─────────────────────────── NUEVO (cotizador → crear prospecto) ───────────────────────────
-  function renderNuevo() {
-    root.innerHTML = `<div class="card"><h4>Nueva cotización</h4>
-      <div class="ev-item"><label>Nombre</label><input class="inp" id="n-nombre"></div>
-      <div class="ev-item"><label>Teléfono</label><input class="inp" id="n-tel"></div>
-      <div class="ev-item"><label>Ejecutivo</label><select class="inp" id="n-ej">${EJECUTIVOS.map(e => `<option>${e}</option>`).join('')}</select></div>
-      <div class="ev-item"><label>Municipio</label><select class="inp" id="n-mun">${MUNICIPIOS.map(m => `<option>${m}</option>`).join('')}</select></div>
-      <div class="ev-item"><label>Tipo</label><select class="inp" id="n-tipo">${TIPOS.map(t => `<option value="${t[0]}">${t[1]}</option>`).join('')}</select></div>
-      <div class="ev-item"><label>Frecuencia</label><select class="inp" id="n-frec">${FRECUENCIAS.map(f => `<option>${f}</option>`).join('')}</select></div>
-      <div class="ev-item"><label>Monto</label><input class="inp" id="n-monto" inputmode="decimal"></div>
-      <div class="ev-item"><label>Plazo</label><select class="inp" id="n-plazo">${PLAZOS.map(p => `<option>${p}</option>`).join('')}</select></div>
-      <label class="doc-chk"><input type="checkbox" id="n-fin"> Financiar comisión</label>
-      <div id="n-prev" class="muted" style="margin:10px 0"></div>
-      <button class="primary big" id="n-crear">Crear prospecto</button>
-    </div>`;
-    const val = () => ({
-      nombre: root.querySelector('#n-nombre').value.trim(), telefono: root.querySelector('#n-tel').value.trim(),
-      ejecutivo: root.querySelector('#n-ej').value, municipio: root.querySelector('#n-mun').value,
-      tipo: root.querySelector('#n-tipo').value, frecuencia: root.querySelector('#n-frec').value,
-      monto: parseFloat(root.querySelector('#n-monto').value) || 0, plazo: parseInt(root.querySelector('#n-plazo').value) || 0,
-      financiar: root.querySelector('#n-fin').checked,
-    });
-    const prev = () => {
-      const d = val(); if (!d.monto || !d.plazo) { root.querySelector('#n-prev').textContent = ''; return null; }
-      try { const c = cotizar(d); root.querySelector('#n-prev').innerHTML = `Abono: <b>${money(c.abonoPuntual)}</b> · Depósito: <b>${money(c.deposito)}</b> · Comisión: <b>${money(c.comision)}</b>`; return c; }
-      catch (e) { root.querySelector('#n-prev').textContent = e.message; return null; }
-    };
-    ['#n-tipo', '#n-frec', '#n-monto', '#n-plazo', '#n-fin'].forEach(s => root.querySelector(s).addEventListener('input', prev));
-    prev();
-    root.querySelector('#n-crear').addEventListener('click', async () => {
-      const d = val(); const c = prev();
-      if (!d.nombre) { alert('Falta el nombre.'); return; }
-      if (!c) { alert('Revisa monto/plazo.'); return; }
-      try {
-        const res = await repo.crearProspecto(d, c, perfil);
-        alert(res.msg); PROSPECTOS = null; TAB = 'PIPE';
-        ov.querySelectorAll('.tb-tab').forEach(x => x.classList.toggle('on', x.dataset.t === 'PIPE'));
-        render();
-      } catch (e) { alert('❌ ' + e.message); }
-    });
   }
 
   render();

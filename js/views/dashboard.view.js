@@ -23,6 +23,7 @@ import { abrirReno } from './reno.view.js';
 import { abrirAgenda } from './agenda.view.js';
 import { abrirDesglose } from './desglose.view.js';
 import { abrirTuberia } from './tuberia.view.js';
+import { abrirCotizador } from './cotizador.view.js';
 import { abrirAplicarPago } from './pago.view.js';
 import { abrirMisSolicitudes } from './mis_solicitudes.view.js';
 import { abrirPagoAmericano } from './pago_americano.view.js';
@@ -40,6 +41,7 @@ const I = {
   reactiv:'<path d="M3 12a9 9 0 0 1 9-9 9.7 9.7 0 0 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.7 9.7 0 0 1-6.7-2.7L3 16"/><path d="M3 21v-5h5"/>',
   desglose:'<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
   tuberia:'<path d="M22 3H2l8 9.5V19l4 2v-8.5L22 3z"/>',
+  cotizador:'<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h2M12 10h2M16 10h0M8 14h2M12 14h2M16 14h0M8 18h6"/>',
   juridico:'<path d="M12 3v18"/><path d="M5 7h14"/><path d="m5 7-3 6h6Z"/><path d="m19 7-3 6h6Z"/><path d="M8 21h8"/>',
   visitas:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
   finanzas:'<line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
@@ -143,6 +145,7 @@ export async function renderDashboard(perfil) {
       { k:'finanzas', t:'Estado resultados', show:['ADMIN','GERENTE'].includes(rol) },
     ]},
     { id:'g3', t:'Gestión', items:[
+      { k:'cotizador', t:'Cotizador', show:true },
       { k:'tuberia', t:'Tubería', show:veTuberia },
       { k:'mistuberia', t:'Mi Tubería', show:['ADMIN','GERENTE','EJECUTIVO'].includes(rol) },
       { k:'juridico', t:'Jurídico', show:veJuridico },
@@ -213,6 +216,7 @@ export async function renderDashboard(perfil) {
   on('cuentas', ()=>abrirCuentas(perfil));
   on('finanzas', ()=>abrirFinanzas(perfil));
   on('tuberia', ()=>abrirTuberia(perfil));
+  on('cotizador', ()=>abrirCotizador(perfil));
   on('mistuberia', ()=>abrirMisTuberia(perfil));
   on('balance', ()=>abrirBalance(perfil));
   on('avisos', ()=>abrirAvisos(perfil));

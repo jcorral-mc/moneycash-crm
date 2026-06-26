@@ -121,6 +121,39 @@ export async function validarJuridico(prospecto, decision, modulo, nota, perfil)
   return { ok: true, etapa };
 }
 
+/** El ejecutivo SOLICITA a Jurídico omitir la evaluación (queda pendiente de autorización). */
+export async function solicitarOmisionEval(prospecto, motivo, perfil) {
+  const cot = prospecto.cotizacion_json || {};
+  cot.evaluacion = { ...(cot.evaluacion || {}), solicitudOmision: { motivo: motivo || '', por: (perfil && perfil.email) || '', fecha: hoy() } };
+  prospecto.cotizacion_json = cot;
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  await logAudit(perfil, 'TUB_EVAL_SOLIC_OMISION', prospecto.nombre, motivo || '');
+  return { ok: true };
+}
+
+/** Jurídico/Admin AUTORIZA omitir la evaluación → la etapa avanza a Expediente. */
+export async function omitirEvaluacion(prospecto, motivo, perfil) {
+  const cot = prospecto.cotizacion_json || {};
+  cot.evaluacion = { ...(cot.evaluacion || {}), omitida: true, completa: false,
+    autorizadaPor: (perfil && perfil.email) || '', motivoOmision: motivo || '', fecha: hoy() };
+  prospecto.cotizacion_json = cot;
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  const etapa = await sincronizarEtapa(prospecto, perfil);
+  await logAudit(perfil, 'TUB_EVAL_OMITIDA', prospecto.nombre, motivo || '');
+  return { ok: true, etapa };
+}
+
+/** Visita: Vane DISPARA/asigna la visita a Eduardo. Queda parada hasta que él la resuelva. */
+export async function asignarVisita(prospecto, datos, perfil) {
+  const cot = prospecto.cotizacion_json || {};
+  cot.visita = { ...(cot.visita || {}), asignada: { ...datos, por: (perfil && perfil.email) || '', fecha: hoy() } };
+  prospecto.cotizacion_json = cot;
+  await db.from('prospectos').update({ cotizacion_json: cot }).eq('id', prospecto.id);
+  await sincronizarEtapa(prospecto, perfil);
+  await logAudit(perfil, 'TUB_VISITA_ASIGNADA', prospecto.nombre, (datos && datos.direccion) || '');
+  return { ok: true };
+}
+
 /** Visita: resultado APROBADA | RECHAZADA (nunca "pendiente"). */
 export async function resolverVisita(prospecto, resultado, datos, perfil) {
   const cot = prospecto.cotizacion_json || {};
